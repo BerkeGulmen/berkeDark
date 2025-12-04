@@ -1,0 +1,60 @@
+{
+  "name": "berkedark",
+  "displayName": "berkeDark",
+  "description": "A carefully crafted dark theme inspired from life. Easy on the eyes and beautiful syntax highlighting.",
+  "version": "1.0.3",
+  "publisher": "BerkeGulmen",
+  "author": {
+    "name": "Berke Gülmen"
+  },
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#2d2a2e",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "keywords": [
+    "dark",
+    "berke",
+    "berkeley",
+    "berkeleykhan",
+    "theme",
+    "dark theme",
+    "syntax highlighting",
+    "berkeDark",
+    "color theme"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "label": "berkeDark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/berkeDark-color-theme.json"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BerkeGulmen/berkedark-vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/BerkeGulmen/berkedark-vscode/issues"
+  },
+  "homepage": "https://github.com/BerkeGulmen/berkedark-vscode#readme",
+  "license": "(AGPL-3.0 OR Commercial)",
+  "licenses": [
+    {
+      "type": "AGPL-3.0",
+      "url": "https://raw.githubusercontent.com/BerkeGulmen/berkedark-vscode/main/LICENSE-AGPLv3.txt"
+    },
+    {
+      "type": "Commercial",
+      "url": "https://raw.githubusercontent.com/BerkeGulmen/berkedark-vscode/main/LICENSE-COMMERCIAL.txt"
+    }
+  ]
+}

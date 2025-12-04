@@ -1,0 +1,11 @@
+berkeDark - Commercial License
+Copyright (c) 2024-present Erim
+
+This commercial license grants you the right to use berkeDark in proprietary 
+and closed-source software products without the obligations of the AGPL-3.0.
+
+The commercial license is granted on a per-company or per-product basis.
+To obtain a commercial license, please contact: erim@erim.com.tr
+
+Without a written commercial license agreement, all usage falls under the 
+GNU Affero General Public License v3.0 (see LICENSE-AGPLv3.txt).

@@ -1,0 +1,10 @@
+.git
+.gitignore
+.vscode
+*.md
+!README.md
+src
+node_modules
+.eslintrc.json
+tsconfig.json
+**/*.ts
