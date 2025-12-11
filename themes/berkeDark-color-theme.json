@@ -28,7 +28,7 @@
 
     "tab.activeBackground": "#2d2a2e",
     "tab.activeForeground": "#fcfcfa",
-    "tab.activeBorderTop": "#aa33aa",
+    "tab.activeBorderTop": "#aaff99",
     "tab.inactiveBackground": "#1a1520",
     "tab.inactiveForeground": "#939293",
     "tab.border": "#000000",
