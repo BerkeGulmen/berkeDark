@@ -6,7 +6,7 @@
   "type": "dark",
   "colors": {
     "editor.background": "#070f1f",
-    "editor.foreground": "#aaffaa",
+    "editor.foreground": "#ffe8c2",
     "foreground": "#fcfcfa",
     "focusBorder": "#050505",
     "selection.background": "#49464e",
@@ -58,9 +58,9 @@
     "panelTitle.activeForeground": "#d0e0ff",
     "panelTitle.inactiveForeground": "#8090cc",
 
-    "terminal.background": "#221f22",
-    "terminal.foreground": "#9cfc9a",
-    "terminal.ansiBlack": "#221f22",
+    "terminal.background": "#060d08",
+    "terminal.foreground": "#ffe8c2",
+    "terminal.ansiBlack": "#060d08",
     "terminal.ansiRed": "#ff4455",
     "terminal.ansiGreen": "#a9ec76",
     "terminal.ansiYellow": "#ffd866",

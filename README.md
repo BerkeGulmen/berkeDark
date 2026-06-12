@@ -4,7 +4,7 @@ A carefully crafted dark theme for Visual Studio Code.
 ![README Preview](./preview-readme.png)
 ![Python Preview](./preview-python.png)
 ![C/C++ Preview](./preview-c.png)
-![Preview](https://raw.githubusercontent.com/BerkeGulmen/berkedark-vscode/main/preview.png)
+![Preview](https://raw.githubusercontent.com/BerkeGulmen/berkedark-vscode/main/preview-python.png)
 
 ## Features
 - Easy on the eyes - Carefully balanced contrast for long coding sessions
@@ -15,15 +15,15 @@ A carefully crafted dark theme for Visual Studio Code.
 ## Color Palette
 | Element       | Color                                   | Hex       |
 |---------------|-----------------------------------------|-----------|
-| Background    | ![#2d2a2e](https://via.placeholder.com/15/2d2a2e/2d2a2e) | `#2d2a2e` |
-| Foreground    | ![#fcfcfa](https://via.placeholder.com/15/fcfcfa/fcfcfa) | `#fcfcfa` |
-| Keywords      | ![#ff6188](https://via.placeholder.com/15/ff6188/ff6188) | `#ff6188` |
-| Strings       | ![#ffd866](https://via.placeholder.com/15/ffd866/ffd866) | `#ffd866` |
-| Functions     | ![#a9dc76](https://via.placeholder.com/15/a9dc76/a9dc76) | `#a9dc76` |
-| Classes/Types | ![#78dce8](https://via.placeholder.com/15/78dce8/78dce8) | `#78dce8` |
-| Numbers       | ![#ab9df2](https://via.placeholder.com/15/ab9df2/ab9df2) | `#ab9df2` |
+| Background    | ![#070f1f](https://via.placeholder.com/15/070f1f/070f1f) | `#070f1f` |
+| Foreground    | ![#ffe8c2](https://via.placeholder.com/15/ffe8c2/ffe8c2) | `#ffe8c2` |
+| Keywords      | ![#57bfff](https://via.placeholder.com/15/57bfff/57bfff) | `#57bfff` |
+| Strings       | ![#ffff00](https://via.placeholder.com/15/ffff00/ffff00) | `#ffff00` |
+| Functions     | ![#3f7fff](https://via.placeholder.com/15/3f7fff/3f7fff) | `#3f7fff` |
+| Classes/Types | ![#57ab64](https://via.placeholder.com/15/57ab64/57ab64) | `#57ab64` |
+| Numbers       | ![#ff00ff](https://via.placeholder.com/15/ff00ff/ff00ff) | `#ff00ff` |
 | Parameters    | ![#fc9867](https://via.placeholder.com/15/fc9867/fc9867) | `#fc9867` |
-| Comments      | ![#727072](https://via.placeholder.com/15/727072/727072) | `#727072` |
+| Comments      | ![#7f7f7f](https://via.placeholder.com/15/7f7f7f/7f7f7f) | `#7f7f7f` |
 
 ## Installation
 
@@ -47,7 +47,7 @@ A carefully crafted dark theme for Visual Studio Code.
 "editor.fontFamily": "'JetBrains Mono', 'Ubuntu Mono'",
   "editor.fontSize": 14,
   "editor.fontLigatures": true,
-  "terminal.integrated.fontFamily": "'Fira Code', 'Ubuntu Mono'"
+  "terminal.integrated.fontFamily": "'Fira Mono', 'Ubuntu Mono'"
   "editor.cursorBlinking": "blink",
   "editor.cursorSmoothCaretAnimation": "on"
 }
