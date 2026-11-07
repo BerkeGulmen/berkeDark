@@ -41,6 +41,7 @@ moves one cell to the right to make room. The program's own bytes stay as they a
 - `src/` the interpreter
 - `tests/run_tests.py` stream and pseudo-terminal tests, `tests/sample.sh` a look at every style,
   `tests/palette.py` every berkeDark colour with its hex value
+- `oh-my-zsh/` the berkeDark prompt theme
 - `config/` colour files for foot and Claude Code
 
 Copyright Berke GÜLMEN. The licence follows the rest of berkeDark and comes with the first

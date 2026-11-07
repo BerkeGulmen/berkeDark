@@ -2,6 +2,11 @@
 
 All notable changes to the "berkeDark" extension will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- oh-my-zsh theme in `terminal/oh-my-zsh`
+
 ## [1.1.0] - 2026-11-07
 
 ### Added

@@ -6,7 +6,7 @@ A complete dark environment built around the deep blue of the ocean. One look fo
 |---|---|
 | **VS Code** | A full colour theme: editor, syntax, sidebar, tabs and integrated terminal |
 | **Web browser** | A Chrome theme: deep blue frame, turquoise tabs and icons, amber bookmarks |
-| **Terminal** | A colour interpreter and colour files: italic, strikethrough and headings each get their own colour, in any program |
+| **Terminal** | A colour interpreter, colour files and an oh-my-zsh theme: italic, strikethrough and headings each get their own colour, in any program |
 
 ![README Preview](./preview-readme.png)
 ![Python Preview](./preview-python.png)
@@ -62,6 +62,9 @@ berkeDark
 ```
 
 Every program started from that shell then shows its styles in berkeDark's colours. See `terminal/README.md` for running it in every new window.
+
+### oh-my-zsh
+Copy `terminal/oh-my-zsh/berkeDark.zsh-theme` to `~/.oh-my-zsh/custom/themes/` and set `ZSH_THEME="berkeDark"` in `~/.zshrc`. Before each command it shows who you are, the machine, the folder, the git branch and the date and time. The line starts with `#`, so it does nothing if you copy and run it.
 
 ## Recommended Settings
 
