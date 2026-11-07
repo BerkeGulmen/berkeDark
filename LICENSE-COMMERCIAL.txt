@@ -1,11 +1,12 @@
 berkeDark - Commercial License
-Copyright (c) 2024-present Erim
+Copyright (c) 2024-present Berke GÜLMEN
 
-This commercial license grants you the right to use berkeDark in proprietary 
-and closed-source software products without the obligations of the AGPL-3.0.
+A commercial license lets you sell berkeDark, include it in a product, a service or a theme
+pack, or use it in any other way the PolyForm Noncommercial and PolyForm Internal Use
+licenses do not allow.
 
-The commercial license is granted on a per-company or per-product basis.
-To obtain a commercial license, please contact: erim@erim.com.tr
+A commercial license is granted in writing, per company or per product. To obtain one,
+contact: berkegulmen at outlook dot com
 
-Without a written commercial license agreement, all usage falls under the 
-GNU Affero General Public License v3.0 (see LICENSE-AGPLv3.txt).
+Without a written commercial license, you may use berkeDark only under the PolyForm
+Noncommercial License 1.0.0 or the PolyForm Internal Use License 1.0.0 (see LICENSE).

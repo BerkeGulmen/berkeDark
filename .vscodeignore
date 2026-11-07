@@ -8,3 +8,8 @@ node_modules
 .eslintrc.json
 tsconfig.json
 **/*.ts
+terminal/**
+browser/**
+*.vsix
+!LICENSE-NONCOMMERCIAL.md
+!LICENSE-INTERNAL-USE.md

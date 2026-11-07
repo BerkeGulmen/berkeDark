@@ -1,12 +1,20 @@
-berkeDark - Dual License
+berkeDark
+Copyright (c) 2024-present Berke GÜLMEN
 
-This project is distributed under two licenses:
+Required Notice: Copyright (c) 2024-present Berke GÜLMEN
 
-1. GNU Affero General Public License v3.0 (AGPL-3.0)
-   See LICENSE-AGPLv3.txt for the full license text.
+berkeDark (the VS Code theme, the browser theme and the terminal colour interpreter) is
+offered from version 1.1.0 on under your choice of:
 
-2. Commercial License
-   For closed-source or commercial use without AGPL-3.0 obligations,
-   please obtain a commercial license. See LICENSE-COMMERCIAL.txt.
+1. PolyForm Noncommercial License 1.0.0, see LICENSE-NONCOMMERCIAL.md
+   Free for personal use, study, research and hobby projects, and for charities, schools,
+   public research bodies and government institutions.
 
-By default, the AGPL-3.0 applies unless you have a written commercial license agreement.
+2. PolyForm Internal Use License 1.0.0, see LICENSE-INTERNAL-USE.md
+   Free for the internal operations of your company.
+
+3. A commercial license, see LICENSE-COMMERCIAL.txt
+   Needed to sell berkeDark or to include it in a product, a service or a theme pack.
+
+Versions up to and including 1.0.11 were released under the GNU Affero General Public
+License v3.0 and stay under it.
