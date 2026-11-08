@@ -4,8 +4,15 @@ All notable changes to the "berkeDark" extension will be documented in this file
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-08
+
 ### Added
+- Claude Code: berkeDark's look for its full-screen interface, set up by `terminal/install.sh`: syntax colours in diffs, a box and a white mark on the rows you sent
+- Numbers, dates and times in plain text get their own colours in full-screen programs
 - oh-my-zsh theme in `terminal/oh-my-zsh`
+
+### Changed
+- The terminal colour interpreter applies its Claude Code marks and diff colours only under Claude Code
 
 ## [1.1.0] - 2026-11-07
 

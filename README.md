@@ -63,6 +63,9 @@ berkeDark
 
 Every program started from that shell then shows its styles in berkeDark's colours. See `terminal/README.md` for running it in every new window.
 
+### Claude Code
+On Linux, `sh terminal/install.sh` gives Claude Code's full-screen interface the berkeDark look. It changes Claude Code's theme and display settings and keeps a backup of what it replaces; `terminal/README.md` says what it does, what was tested and how to remove it.
+
 ### oh-my-zsh
 Copy `terminal/oh-my-zsh/berkeDark.zsh-theme` to `~/.oh-my-zsh/custom/themes/` and set `ZSH_THEME="berkeDark"` in `~/.zshrc`. Before each command it shows who you are, the machine, the folder, the git branch and the date and time. The line starts with `#`, so it does nothing if you copy and run it.
 
@@ -70,14 +73,16 @@ Copy `terminal/oh-my-zsh/berkeDark.zsh-theme` to `~/.oh-my-zsh/custom/themes/` a
 
 ```json
 {
-  "editor.fontFamily": "'JetBrains Mono', 'Ubuntu Mono'",
+  "editor.fontFamily": "'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Cascadia Mono', Consolas, Menlo, 'DejaVu Sans Mono', monospace",
   "editor.fontSize": 14,
   "editor.fontLigatures": true,
-  "terminal.integrated.fontFamily": "'Fira Mono', 'Ubuntu Mono'",
+  "terminal.integrated.fontFamily": "Monaco, 'Terminess Nerd Font', 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', monospace",
   "editor.cursorBlinking": "blink",
   "editor.cursorSmoothCaretAnimation": "on"
 }
 ```
+
+VS Code skips a font that is not installed and takes the next one, so these lists work on every system. The editor prefers JetBrainsMono Nerd Font, then plain JetBrains Mono; on macOS it then has Menlo. The terminal prefers Monaco on macOS, then Terminess Nerd Font. Without those, both use what the system already has: Cascadia Mono or Consolas on Windows and DejaVu Sans Mono on most Linux systems. JetBrainsMono and Terminess Nerd Font are free from [Nerd Fonts](https://www.nerdfonts.com/font-downloads).
 
 ## Language Support
 
