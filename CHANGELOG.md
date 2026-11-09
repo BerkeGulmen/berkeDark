@@ -4,6 +4,15 @@ All notable changes to the "berkeDark" extension will be documented in this file
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-11-09
+
+### Changed
+- The README's screenshots now show the current theme, and the repeated Python preview is gone
+
+### Fixed
+- Terminal colour interpreter: writes outside its arrays with insert and delete line below the scrolling region, and overlong numeric parameters
+- Terminal colour interpreter: follows the terminal more exactly with cursor save and restore, automatic wrapping off, invalid scrolling regions and origin mode
+
 ## [1.2.0] - 2026-11-08
 
 ### Added

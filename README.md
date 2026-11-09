@@ -11,7 +11,6 @@ A complete dark environment built around the deep blue of the ocean. One look fo
 ![README Preview](./preview-readme.png)
 ![Python Preview](./preview-python.png)
 ![C/C++ Preview](./preview-c.png)
-![Preview](https://raw.githubusercontent.com/BerkeGulmen/berkedark-vscode/main/preview-python.png)
 
 ## Features
 - Easy on the eyes - Carefully balanced contrast for long coding sessions

@@ -57,6 +57,7 @@ struct screen {
     bool is_alternate;
     bool is_claude;  /* the full-screen program is Claude Code: its marks and diff colours apply */
     bool has_saved_cursor, is_insert, is_origin; /* the program's states in which numbers are left alone */
+    bool is_no_wrap; /* the program turned automatic wrapping off; a terminal mode, so a new map keeps it */
     bool has_band_changed;
     int rows, columns; /* 0 rows: no map is kept */
     int row, column, saved_row, saved_column;
@@ -334,6 +335,10 @@ static void clear_cells(struct interpreter *in, int row, int from, int to)
 static void scroll_rows(struct screen *sc, int top, int bottom, int count)
 {
     int height = bottom - top + 1;
+
+    if (height <= 0)
+        return;
+
     int amount = abs(count) < height ? abs(count) : height;
     size_t kept = (size_t)(height - amount);
 
@@ -528,8 +533,12 @@ static void print_code_point(struct interpreter *in, unsigned code_point)
         width = 1;
     if (sc->column + width > sc->columns) {
         sc->word_length = 0;
-        sc->column = 0;
-        line_feed(sc);
+        if (sc->is_no_wrap) {
+            sc->column = sc->columns - width; /* the end of the row is written again */
+        } else {
+            sc->column = 0;
+            line_feed(sc);
+        }
     }
     follow_gutter(in, code_point);
     follow_word(sc, code_point, width);
@@ -653,13 +662,24 @@ static void shift_cells(struct interpreter *in, int count)
     }
 }
 
+/* A number in a sequence. A program may print any length of digits; a larger one than this means nothing on a screen. */
+static int read_parameter(const char *p)
+{
+    enum { LARGEST_PARAMETER = 65535 };
+    int value = 0;
+
+    while (isdigit((unsigned char)*p) && value < LARGEST_PARAMETER)
+        value = value * 10 + (*p++ - '0');
+    return value < LARGEST_PARAMETER ? value : LARGEST_PARAMETER;
+}
+
 static void follow_cursor_sequence(struct interpreter *in, unsigned char final)
 {
     struct screen *sc = &in->screen;
     int values[2] = {0, 0}, count = 0;
 
     for (const char *p = in->parameters; count < 2; ++count) {
-        values[count] = atoi(p);
+        values[count] = read_parameter(p);
         p = strchr(p, ';');
         if (p == NULL)
             break;
@@ -678,10 +698,10 @@ static void follow_cursor_sequence(struct interpreter *in, unsigned char final)
     case 'F': sc->row -= amount; sc->column = 0; break;
     case 'G':
     case '`': sc->column = amount - 1; break;
-    case 'd': sc->row = amount - 1; break;
+    case 'd': sc->row = amount - 1 + (sc->is_origin ? sc->top : 0); break;
     case 'H':
     case 'f':
-        sc->row = amount - 1;
+        sc->row = amount - 1 + (sc->is_origin ? sc->top : 0);
         sc->column = (values[1] > 0 ? values[1] : 1) - 1;
         break;
     case 'J': erase_in_display(in, first); break;
@@ -704,25 +724,38 @@ static void follow_cursor_sequence(struct interpreter *in, unsigned char final)
         return;
     case '@': keep_cursor_on_screen(sc); sc->code_from[sc->row] = -1; shift_cells(in, amount); return;
     case 'P': keep_cursor_on_screen(sc); sc->code_from[sc->row] = -1; shift_cells(in, -amount); return;
-    case 'L': scroll_rows(sc, sc->row, sc->bottom, -amount); break;
-    case 'M': scroll_rows(sc, sc->row, sc->bottom, amount); break;
+    case 'L':
+    case 'M':
+        /* Measured on foot: nothing happens outside the region, a pending wrap stays; inside it the cursor goes to the start of its row. */
+        if (sc->row < sc->top || sc->row > sc->bottom)
+            return;
+        scroll_rows(sc, sc->row, sc->bottom, final == 'L' ? -amount : amount);
+        sc->column = 0;
+        break;
     case 'S': scroll_rows(sc, sc->top, sc->bottom, amount); break;
     case 'T': scroll_rows(sc, sc->top, sc->bottom, -amount); break;
-    case 'r':
+    case 'r': {
+        /* Measured on foot: a bottom past the screen is the last row; a region that is no region is ignored, a pending wrap stays. */
+        int bottom = (values[1] > 0 && values[1] < sc->rows ? values[1] : sc->rows) - 1;
+
+        if (amount - 1 >= bottom)
+            return;
         sc->top = amount - 1;
-        sc->bottom = (values[1] > 0 ? values[1] : sc->rows) - 1;
-        if (sc->top < 0 || sc->bottom >= sc->rows || sc->top >= sc->bottom) {
-            sc->top = 0;
-            sc->bottom = sc->rows - 1;
-        }
-        sc->row = sc->column = 0;
+        sc->bottom = bottom;
+        sc->row = sc->is_origin ? sc->top : 0;
+        sc->column = 0;
         break;
+    }
     case 's':
+        if (in->length != 0 && !isdigit((unsigned char)in->parameters[0]))
+            return; /* a private sequence; measured on foot: plain CSI s and u save and restore, with or without a number */
         sc->saved_row = sc->row;
         sc->saved_column = sc->column;
         sc->has_saved_cursor = true;
         break;
     case 'u':
+        if (in->length != 0 && !isdigit((unsigned char)in->parameters[0]))
+            return;
         sc->row = sc->saved_row;
         sc->column = sc->saved_column;
         sc->has_saved_cursor = false;
@@ -738,6 +771,12 @@ static void follow_cursor_sequence(struct interpreter *in, unsigned char final)
             sc->is_insert = final == 'h';
         break;
     default: break;
+    }
+    if (sc->is_origin) { /* measured on foot: in origin mode every move stops at the region's edges */
+        if (sc->row < sc->top)
+            sc->row = sc->top;
+        else if (sc->row > sc->bottom)
+            sc->row = sc->bottom;
     }
     keep_cursor_on_screen(sc);
 }
@@ -985,8 +1024,8 @@ static void draw_box(struct interpreter *in)
     }
     for (int row = 0; row < sc->rows; ++row)
         has_work = has_work || wanted[row] != sc->edges[row];
-    if (!has_work)
-        return;
+    if (!has_work || sc->has_saved_cursor || sc->is_insert || sc->is_origin)
+        return; /* drawing then would take the program's saved cursor, or land elsewhere */
 
     put_text("\033[?2026h\0337");
     for (int row = 0; row < sc->rows; ++row) {
@@ -1036,7 +1075,7 @@ static void apply_private_modes(struct interpreter *in, bool is_on)
     struct screen *sc = &in->screen;
 
     for (const char *p = in->parameters; p != NULL; p = strchr(p, ';') ? strchr(p, ';') + 1 : NULL) {
-        int mode = atoi(p);
+        int mode = read_parameter(p);
 
         if (mode == 1049 || mode == 1047 || mode == 47) {
             sc->is_alternate = is_on;
@@ -1044,6 +1083,10 @@ static void apply_private_modes(struct interpreter *in, bool is_on)
             clear_map(sc);
         } else if (mode == 6) {
             sc->is_origin = is_on;
+            sc->row = is_on ? sc->top : 0; /* measured on foot: either way the cursor goes home */
+            sc->column = 0;
+        } else if (mode == 7) {
+            sc->is_no_wrap = !is_on;
         } else if (mode == 2026 && !is_on && has_map(sc)) {
             draw_box(in);
         }
@@ -1063,13 +1106,15 @@ static void finish_control_sequence(struct interpreter *in, unsigned char final)
         return;
     }
 
-    if (final == 'm')
+    if (final == 'm') {
         apply_style_sequence(in);
-    else if (final == 's' && in->length == 0)
+        return;
+    }
+    if (final == 's' && in->length == 0)
         in->saved_style = in->style;
     else if (final == 'u' && in->length == 0)
         in->style = in->saved_style;
-    else if (has_map(&in->screen))
+    if (has_map(&in->screen))
         follow_cursor_sequence(in, final);
 }
 
@@ -1115,6 +1160,7 @@ static void track(struct interpreter *in, unsigned char c)
             in->style = (struct style){0};
             clear_map(&in->screen);
             in->screen.is_alternate = false;
+            in->screen.is_no_wrap = false;
         } else if (c == 'M' && has_map(&in->screen)) {
             reverse_index(&in->screen);
         } else if (c == 'D' && has_map(&in->screen)) {
