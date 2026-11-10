@@ -1,0 +1,24 @@
+{
+  "name": "berkeDark",
+  "type": "custom",
+  "Background": "#070f1f",
+  "Foreground": "",
+  "LightBlue": "#a3a5f5",
+  "AccentBlue": "#57bfff",
+  "AccentPurple": "#ff9e60",
+  "AccentCyan": "#3fff7f",
+  "AccentGreen": "#a9ec76",
+  "AccentYellow": "#ffff00",
+  "AccentRed": "#ff5c7c",
+  "AccentYellowDim": "#ffd25c",
+  "AccentRedDim": "#ff4455",
+  "DiffAdded": "#1d2a2b",
+  "DiffRemoved": "#281a2d",
+  "Comment": "#707070",
+  "Gray": "#8f95a0",
+  "GradientColors": ["#57bfff", "#6fdcf0"],
+  "border": {
+    "default": "#6e7380",
+    "focused": "#57bfff"
+  }
+}

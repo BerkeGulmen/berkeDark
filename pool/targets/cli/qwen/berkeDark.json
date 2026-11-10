@@ -1,0 +1,24 @@
+{
+  "name": "berkeDark",
+  "type": "custom",
+  "Background": "@{bg:base.background}",
+  "Foreground": "",
+  "LightBlue": "@{prose.code.inline}",
+  "AccentBlue": "@{code.keyword}",
+  "AccentPurple": "@{=orange}",
+  "AccentCyan": "@{code.type}",
+  "AccentGreen": "@{status.success}",
+  "AccentYellow": "@{code.string}",
+  "AccentRed": "@{status.error}",
+  "AccentYellowDim": "@{=gold}",
+  "AccentRedDim": "@{=scarlet}",
+  "DiffAdded": "@{bg:diff.added}",
+  "DiffRemoved": "@{bg:diff.removed}",
+  "Comment": "@{code.comment}",
+  "Gray": "@{base.muted}",
+  "GradientColors": ["@{=sky}", "@{=turquoise}"],
+  "border": {
+    "default": "@{chat.user.input.border}",
+    "focused": "@{base.border.focus}"
+  }
+}

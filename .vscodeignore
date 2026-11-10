@@ -14,3 +14,4 @@ browser/**
 !LICENSE-NONCOMMERCIAL.md
 !LICENSE-INTERNAL-USE.md
 pool/**
+cli/**

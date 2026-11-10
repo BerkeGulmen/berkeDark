@@ -1,7 +1,7 @@
 {
   "name": "berkeDark pool",
-  "version": "0.3.0",
-  "state": "judged by the author on 2026-11-10 and adapted to Claude Code in four steps. Since 2026-11-10 the single source of berkeDark: every file that carries a colour is written from it by tools/generate.py.",
+  "version": "0.4.0",
+  "state": "judged by the author on 2026-11-10. The single source of berkeDark: the editor theme, the browser theme, the terminal and the themes of the AI command-line tools are written from it by tools/generate.py.",
   "updated": "2026-11-10",
   "principles": [
     "Different things appear in different colours, on condition that the colours suit each other. (the author, 2026-11-07)",
@@ -378,9 +378,9 @@
     "claude-code": "theme file for interface classes; our interpreter for text classes; see each class",
     "vscode": "the published theme: token rules for the code classes, workbench keys for the ui classes",
     "browser": "frame, toolbar, tabs, bookmarks",
-    "qwen-code": "its own truecolour theme (custom theme file): text, accents, borders, diff, code colours; does not use the terminal palette",
-    "codex": "its own truecolour look: a syntax theme for code and Markdown, the rest fixed; does not use the terminal palette",
-    "grok": "with theme terminal it takes everything from the sixteen ansi colours; block styling in pager.toml"
+    "qwen-code": "its own truecolour theme, written from the pool as cli/qwen/berkeDark.json (2026-11-10): about fifteen colours; a number in code shares the success colour, a string the warning colour, a mapping's key the inline code colour; no colours for headings or list marks; plain text is left to the terminal",
+    "codex": "a syntax theme (.tmTheme), written from the pool as cli/codex/berkedark.tmTheme (2026-11-10): it colours rendered Markdown (heading levels, bold, italic, links, quotes, list marks, inline code) and code; a table's header takes the type colour; the rest of the interface is its own",
+    "grok": "no theme file can be given; with theme = \"terminal\" it draws with the terminal's sixteen colours, the ansi classes"
   },
   "kept": {
       "note": "decisions of the published theme that are not sorted into classes yet; they stay valid as they are. A value is a palette name, name/alpha, role:CLASS or bg:CLASS",
