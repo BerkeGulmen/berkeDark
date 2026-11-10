@@ -1,0 +1,736 @@
+{
+  "$schema": "vscode://schemas/color-theme",
+  "name": "berkeDark",
+  "author": "Berke GÜLMEN",
+  "license": "See LICENSE",
+  "type": "dark",
+  "colors": {
+    "editor.background": "@{kept:vscode.workbench:editor.background}",
+    "editor.foreground": "@{kept:vscode.workbench:editor.foreground}",
+    "foreground": "@{kept:vscode.workbench:foreground}",
+    "focusBorder": "@{kept:vscode.workbench:focusBorder}",
+    "selection.background": "@{kept:vscode.workbench:selection.background}",
+    "errorForeground": "@{kept:vscode.workbench:errorForeground}",
+
+    "sideBar.background": "@{kept:vscode.workbench:sideBar.background}",
+    "sideBar.foreground": "@{kept:vscode.workbench:sideBar.foreground}",
+    "sideBar.border": "@{kept:vscode.workbench:sideBar.border}",
+    "sideBarTitle.foreground": "@{kept:vscode.workbench:sideBarTitle.foreground}",
+    "sideBarSectionHeader.background": "@{kept:vscode.workbench:sideBarSectionHeader.background}",
+    "sideBarSectionHeader.foreground": "@{kept:vscode.workbench:sideBarSectionHeader.foreground}",
+
+    "activityBar.background": "@{kept:vscode.workbench:activityBar.background}",
+    "activityBar.foreground": "@{kept:vscode.workbench:activityBar.foreground}",
+    "activityBar.inactiveForeground": "@{kept:vscode.workbench:activityBar.inactiveForeground}",
+    "activityBar.border": "@{kept:vscode.workbench:activityBar.border}",
+    "activityBarBadge.background": "@{kept:vscode.workbench:activityBarBadge.background}",
+    "activityBarBadge.foreground": "@{kept:vscode.workbench:activityBarBadge.foreground}",
+
+    "tab.activeBackground": "@{kept:vscode.workbench:tab.activeBackground}",
+    "tab.activeForeground": "@{kept:vscode.workbench:tab.activeForeground}",
+    "tab.activeBorderTop": "@{kept:vscode.workbench:tab.activeBorderTop}",
+    "tab.inactiveBackground": "@{kept:vscode.workbench:tab.inactiveBackground}",
+    "tab.inactiveForeground": "@{kept:vscode.workbench:tab.inactiveForeground}",
+    "tab.border": "@{kept:vscode.workbench:tab.border}",
+    "tab.hoverBackground": "@{kept:vscode.workbench:tab.hoverBackground}",
+    "editorGroupHeader.tabsBackground": "@{kept:vscode.workbench:editorGroupHeader.tabsBackground}",
+    "editorGroupHeader.tabsBorder": "@{kept:vscode.workbench:editorGroupHeader.tabsBorder}",
+
+    "statusBar.background": "@{kept:vscode.workbench:statusBar.background}",
+    "statusBar.foreground": "@{kept:vscode.workbench:statusBar.foreground}",
+    "statusBar.border": "@{kept:vscode.workbench:statusBar.border}",
+    "statusBar.debuggingBackground": "@{kept:vscode.workbench:statusBar.debuggingBackground}",
+    "statusBar.debuggingForeground": "@{kept:vscode.workbench:statusBar.debuggingForeground}",
+    "statusBar.noFolderBackground": "@{kept:vscode.workbench:statusBar.noFolderBackground}",
+    "statusBarItem.hoverBackground": "@{kept:vscode.workbench:statusBarItem.hoverBackground}",
+    "statusBarItem.remoteBackground": "@{kept:vscode.workbench:statusBarItem.remoteBackground}",
+    "statusBarItem.remoteForeground": "@{kept:vscode.workbench:statusBarItem.remoteForeground}",
+
+    "titleBar.activeBackground": "@{kept:vscode.workbench:titleBar.activeBackground}",
+    "titleBar.activeForeground": "@{kept:vscode.workbench:titleBar.activeForeground}",
+    "titleBar.inactiveBackground": "@{kept:vscode.workbench:titleBar.inactiveBackground}",
+    "titleBar.inactiveForeground": "@{kept:vscode.workbench:titleBar.inactiveForeground}",
+    "titleBar.border": "@{kept:vscode.workbench:titleBar.border}",
+
+    "panel.background": "@{kept:vscode.workbench:panel.background}",
+    "panel.border": "@{kept:vscode.workbench:panel.border}",
+    "panelTitle.activeBorder": "@{kept:vscode.workbench:panelTitle.activeBorder}",
+    "panelTitle.activeForeground": "@{kept:vscode.workbench:panelTitle.activeForeground}",
+    "panelTitle.inactiveForeground": "@{kept:vscode.workbench:panelTitle.inactiveForeground}",
+
+    "terminal.background": "@{kept:vscode.workbench:terminal.background}",
+    "terminal.foreground": "@{kept:vscode.workbench:terminal.foreground}",
+    "terminal.ansiBlack": "@{kept:vscode.workbench:terminal.ansiBlack}",
+    "terminal.ansiRed": "@{kept:vscode.workbench:terminal.ansiRed}",
+    "terminal.ansiGreen": "@{kept:vscode.workbench:terminal.ansiGreen}",
+    "terminal.ansiYellow": "@{kept:vscode.workbench:terminal.ansiYellow}",
+    "terminal.ansiBlue": "@{kept:vscode.workbench:terminal.ansiBlue}",
+    "terminal.ansiMagenta": "@{kept:vscode.workbench:terminal.ansiMagenta}",
+    "terminal.ansiCyan": "@{kept:vscode.workbench:terminal.ansiCyan}",
+    "terminal.ansiWhite": "@{kept:vscode.workbench:terminal.ansiWhite}",
+    "terminal.ansiBrightBlack": "@{kept:vscode.workbench:terminal.ansiBrightBlack}",
+    "terminal.ansiBrightRed": "@{kept:vscode.workbench:terminal.ansiBrightRed}",
+    "terminal.ansiBrightGreen": "@{kept:vscode.workbench:terminal.ansiBrightGreen}",
+    "terminal.ansiBrightYellow": "@{kept:vscode.workbench:terminal.ansiBrightYellow}",
+    "terminal.ansiBrightBlue": "@{kept:vscode.workbench:terminal.ansiBrightBlue}",
+    "terminal.ansiBrightMagenta": "@{kept:vscode.workbench:terminal.ansiBrightMagenta}",
+    "terminal.ansiBrightCyan": "@{kept:vscode.workbench:terminal.ansiBrightCyan}",
+    "terminal.ansiBrightWhite": "@{kept:vscode.workbench:terminal.ansiBrightWhite}",
+
+    "editorLineNumber.foreground": "@{kept:vscode.workbench:editorLineNumber.foreground}",
+    "editorLineNumber.activeForeground": "@{kept:vscode.workbench:editorLineNumber.activeForeground}",
+    "editorCursor.foreground": "@{kept:vscode.workbench:editorCursor.foreground}",
+    "editor.selectionBackground": "@{kept:vscode.workbench:editor.selectionBackground}",
+    "editor.selectionHighlightBackground": "@{kept:vscode.workbench:editor.selectionHighlightBackground}",
+    "editor.lineHighlightBackground": "@{kept:vscode.workbench:editor.lineHighlightBackground}",
+    "editor.lineHighlightBorder": "@{kept:vscode.workbench:editor.lineHighlightBorder}",
+    "editor.findMatchBackground": "@{kept:vscode.workbench:editor.findMatchBackground}",
+    "editor.findMatchHighlightBackground": "@{kept:vscode.workbench:editor.findMatchHighlightBackground}",
+    "editor.wordHighlightBackground": "@{kept:vscode.workbench:editor.wordHighlightBackground}",
+    "editor.wordHighlightStrongBackground": "@{kept:vscode.workbench:editor.wordHighlightStrongBackground}",
+    "editorIndentGuide.background1": "@{kept:vscode.workbench:editorIndentGuide.background1}",
+    "editorIndentGuide.activeBackground1": "@{kept:vscode.workbench:editorIndentGuide.activeBackground1}",
+    "editorRuler.foreground": "@{kept:vscode.workbench:editorRuler.foreground}",
+    "editorWhitespace.foreground": "@{kept:vscode.workbench:editorWhitespace.foreground}",
+
+    "editorBracketMatch.background": "@{kept:vscode.workbench:editorBracketMatch.background}",
+    "editorBracketMatch.border": "@{kept:vscode.workbench:editorBracketMatch.border}",
+    "editorBracketHighlight.foreground1": "@{kept:vscode.workbench:editorBracketHighlight.foreground1}",
+    "editorBracketHighlight.foreground2": "@{kept:vscode.workbench:editorBracketHighlight.foreground2}",
+    "editorBracketHighlight.foreground3": "@{kept:vscode.workbench:editorBracketHighlight.foreground3}",
+    "editorBracketHighlight.foreground4": "@{kept:vscode.workbench:editorBracketHighlight.foreground4}",
+    "editorBracketHighlight.foreground5": "@{kept:vscode.workbench:editorBracketHighlight.foreground5}",
+    "editorBracketHighlight.foreground6": "@{kept:vscode.workbench:editorBracketHighlight.foreground6}",
+
+    "editorGutter.addedBackground": "@{kept:vscode.workbench:editorGutter.addedBackground}",
+    "editorGutter.modifiedBackground": "@{kept:vscode.workbench:editorGutter.modifiedBackground}",
+    "editorGutter.deletedBackground": "@{kept:vscode.workbench:editorGutter.deletedBackground}",
+
+    "diffEditor.insertedTextBackground": "@{kept:vscode.workbench:diffEditor.insertedTextBackground}",
+    "diffEditor.removedTextBackground": "@{kept:vscode.workbench:diffEditor.removedTextBackground}",
+
+    "scrollbar.shadow": "@{kept:vscode.workbench:scrollbar.shadow}",
+    "scrollbarSlider.background": "@{kept:vscode.workbench:scrollbarSlider.background}",
+    "scrollbarSlider.hoverBackground": "@{kept:vscode.workbench:scrollbarSlider.hoverBackground}",
+    "scrollbarSlider.activeBackground": "@{kept:vscode.workbench:scrollbarSlider.activeBackground}",
+
+    "input.background": "@{kept:vscode.workbench:input.background}",
+    "input.foreground": "@{kept:vscode.workbench:input.foreground}",
+    "input.border": "@{kept:vscode.workbench:input.border}",
+    "input.placeholderForeground": "@{kept:vscode.workbench:input.placeholderForeground}",
+    "inputOption.activeBorder": "@{kept:vscode.workbench:inputOption.activeBorder}",
+    "inputValidation.errorBackground": "@{kept:vscode.workbench:inputValidation.errorBackground}",
+    "inputValidation.errorBorder": "@{kept:vscode.workbench:inputValidation.errorBorder}",
+    "inputValidation.warningBackground": "@{kept:vscode.workbench:inputValidation.warningBackground}",
+    "inputValidation.warningBorder": "@{kept:vscode.workbench:inputValidation.warningBorder}",
+    "inputValidation.infoBackground": "@{kept:vscode.workbench:inputValidation.infoBackground}",
+    "inputValidation.infoBorder": "@{kept:vscode.workbench:inputValidation.infoBorder}",
+
+    "dropdown.background": "@{kept:vscode.workbench:dropdown.background}",
+    "dropdown.foreground": "@{kept:vscode.workbench:dropdown.foreground}",
+    "dropdown.border": "@{kept:vscode.workbench:dropdown.border}",
+
+    "list.activeSelectionBackground": "@{kept:vscode.workbench:list.activeSelectionBackground}",
+    "list.activeSelectionForeground": "@{kept:vscode.workbench:list.activeSelectionForeground}",
+    "list.hoverBackground": "@{kept:vscode.workbench:list.hoverBackground}",
+    "list.focusBackground": "@{kept:vscode.workbench:list.focusBackground}",
+    "list.highlightForeground": "@{kept:vscode.workbench:list.highlightForeground}",
+    "list.errorForeground": "@{kept:vscode.workbench:list.errorForeground}",
+    "list.warningForeground": "@{kept:vscode.workbench:list.warningForeground}",
+
+    "button.background": "@{kept:vscode.workbench:button.background}",
+    "button.foreground": "@{kept:vscode.workbench:button.foreground}",
+    "button.hoverBackground": "@{kept:vscode.workbench:button.hoverBackground}",
+    "button.secondaryBackground": "@{kept:vscode.workbench:button.secondaryBackground}",
+    "button.secondaryForeground": "@{kept:vscode.workbench:button.secondaryForeground}",
+
+    "badge.background": "@{kept:vscode.workbench:badge.background}",
+    "badge.foreground": "@{kept:vscode.workbench:badge.foreground}",
+
+    "progressBar.background": "@{kept:vscode.workbench:progressBar.background}",
+
+    "editorWidget.background": "@{kept:vscode.workbench:editorWidget.background}",
+    "editorWidget.border": "@{kept:vscode.workbench:editorWidget.border}",
+    "editorSuggestWidget.background": "@{kept:vscode.workbench:editorSuggestWidget.background}",
+    "editorSuggestWidget.border": "@{kept:vscode.workbench:editorSuggestWidget.border}",
+    "editorSuggestWidget.selectedBackground": "@{kept:vscode.workbench:editorSuggestWidget.selectedBackground}",
+    "editorSuggestWidget.highlightForeground": "@{kept:vscode.workbench:editorSuggestWidget.highlightForeground}",
+
+    "peekView.border": "@{kept:vscode.workbench:peekView.border}",
+    "peekViewEditor.background": "@{kept:vscode.workbench:peekViewEditor.background}",
+    "peekViewResult.background": "@{kept:vscode.workbench:peekViewResult.background}",
+    "peekViewTitle.background": "@{kept:vscode.workbench:peekViewTitle.background}",
+    "peekViewTitleLabel.foreground": "@{kept:vscode.workbench:peekViewTitleLabel.foreground}",
+    "peekViewTitleDescription.foreground": "@{kept:vscode.workbench:peekViewTitleDescription.foreground}",
+
+    "gitDecoration.addedResourceForeground": "@{kept:vscode.workbench:gitDecoration.addedResourceForeground}",
+    "gitDecoration.modifiedResourceForeground": "@{kept:vscode.workbench:gitDecoration.modifiedResourceForeground}",
+    "gitDecoration.deletedResourceForeground": "@{kept:vscode.workbench:gitDecoration.deletedResourceForeground}",
+    "gitDecoration.untrackedResourceForeground": "@{kept:vscode.workbench:gitDecoration.untrackedResourceForeground}",
+    "gitDecoration.ignoredResourceForeground": "@{kept:vscode.workbench:gitDecoration.ignoredResourceForeground}",
+    "gitDecoration.conflictingResourceForeground": "@{kept:vscode.workbench:gitDecoration.conflictingResourceForeground}",
+
+    "minimap.background": "@{kept:vscode.workbench:minimap.background}",
+    "minimap.selectionHighlight": "@{kept:vscode.workbench:minimap.selectionHighlight}",
+    "minimap.findMatchHighlight": "@{kept:vscode.workbench:minimap.findMatchHighlight}",
+
+    "notificationCenter.border": "@{kept:vscode.workbench:notificationCenter.border}",
+    "notifications.background": "@{kept:vscode.workbench:notifications.background}",
+    "notifications.foreground": "@{kept:vscode.workbench:notifications.foreground}",
+    "notifications.border": "@{kept:vscode.workbench:notifications.border}",
+    "notificationToast.border": "@{kept:vscode.workbench:notificationToast.border}",
+
+    "breadcrumb.foreground": "@{kept:vscode.workbench:breadcrumb.foreground}",
+    "breadcrumb.focusForeground": "@{kept:vscode.workbench:breadcrumb.focusForeground}",
+    "breadcrumb.activeSelectionForeground": "@{kept:vscode.workbench:breadcrumb.activeSelectionForeground}",
+    "breadcrumbPicker.background": "@{kept:vscode.workbench:breadcrumbPicker.background}"
+  },
+"tokenColors": [
+    {
+      "name": "Comments",
+      "scope": [
+        "comment",
+        "punctuation.definition.comment"
+      ],
+      "settings": {
+        "foreground": "@{code.comment}",
+        "fontStyle": "italic"
+      }
+    },
+    {
+        "name": "Python Docstrings",
+        "scope": [
+            "string.quoted.docstring.multi.python",
+            "string.quoted.docstring.single.python",
+            "punctuation.definition.string.begin.python string.quoted.docstring",
+            "punctuation.definition.string.end.python string.quoted.docstring"
+        ],
+        "settings": {
+            "foreground": "@{code.docstring}",
+            "fontStyle": "italic"
+        }
+    },
+    {
+      "name": "Keywords",
+      "scope": [
+        "keyword",
+        "keyword.control",
+        "keyword.operator.logical",
+        "keyword.operator.new",
+        "keyword.operator.expression",
+        "keyword.operator.delete",
+        "keyword.operator.typeof",
+        "keyword.operator.void",
+        "keyword.operator.instanceof",
+        "storage.type",
+        "storage.modifier"
+      ],
+      "settings": {
+        "foreground": "@{code.keyword}"
+      }
+    },
+    {
+      "name": "Atomic Keywords",
+      "scope": [
+        "keyword.other",
+        "keyword.control.import",
+        "keyword.control.export",
+        "keyword.control.from"
+      ],
+      "settings": {
+        "foreground": "@{code.keyword.module}"
+      }
+    },
+    {
+      "name": "Strings",
+      "scope": [
+        "string",
+        "string.quoted",
+        "punctuation.definition.string"
+      ],
+      "settings": {
+        "foreground": "@{code.string}"
+      }
+    },
+    {
+      "name": "Template Strings",
+      "scope": [
+        "string.template",
+        "punctuation.definition.template-expression"
+      ],
+      "settings": {
+        "foreground": "@{code.string}"
+      }
+    },
+    {
+      "name": "Numbers",
+      "scope": [
+        "constant.numeric"
+      ],
+      "settings": {
+        "foreground": "@{code.number}"
+      }
+    },
+    {
+      "name": "Booleans",
+      "scope": [
+        "constant.language.boolean",
+        "constant.language.true",
+        "constant.language.false"
+      ],
+      "settings": {
+        "foreground": "@{code.constant.language}"
+      }
+    },
+    {
+      "name": "Built-in Constants",
+      "scope": [
+        "constant.language",
+        "constant.language.null",
+        "constant.language.undefined"
+      ],
+      "settings": {
+        "foreground": "@{code.constant.language}"
+      }
+    },
+    {
+      "name": "User Constants",
+      "scope": [
+        "constant.other",
+        "variable.other.constant"
+      ],
+      "settings": {
+        "foreground": "@{code.constant.user}"
+      }
+    },
+    {
+      "name": "Function Definitions",
+      "scope": [
+        "entity.name.function"
+      ],
+      "settings": {
+        "foreground": "@{code.function.definition}"
+      }
+    },
+    {
+      "name": "Function References",
+      "scope": [
+        "support.function",
+        "meta.function-call.generic"
+      ],
+      "settings": {
+        "foreground": "@{code.function.call}"
+      }
+    },
+    {
+      "name": "Function Properties",
+      "scope": [
+        "meta.function-call.method",
+        "entity.name.function.member"
+      ],
+      "settings": {
+        "foreground": "@{code.function.method}"
+      }
+    },
+    {
+      "name": "Function Parameters",
+      "scope": [
+        "variable.parameter",
+        "meta.function.parameters"
+      ],
+      "settings": {
+        "foreground": "@{code.parameter}",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Class Names",
+      "scope": [
+        "entity.name.class",
+        "entity.name.type.class",
+        "support.class"
+      ],
+      "settings": {
+        "foreground": "@{code.class}"
+      }
+    },
+    {
+      "name": "Type Names",
+      "scope": [
+        "entity.name.type",
+        "support.type",
+        "entity.other.inherited-class"
+      ],
+      "settings": {
+        "foreground": "@{code.type}"
+      }
+    },
+    {
+      "name": "Interfaces",
+      "scope": [
+        "entity.name.type.interface"
+      ],
+      "settings": {
+        "foreground": "@{code.type}"
+      }
+    },
+    {
+      "name": "Variable Names",
+      "scope": [
+        "variable",
+        "variable.other"
+      ],
+      "settings": {
+        "foreground": "@{code.variable}"
+      }
+    },
+    {
+      "name": "Variable Definitions",
+      "scope": [
+        "variable.other.readwrite",
+        "variable.other.assignment"
+      ],
+      "settings": {
+        "foreground": "@{code.variable.definition}"
+      }
+    },
+    {
+      "name": "Property Names",
+      "scope": [
+        "variable.other.property",
+        "variable.other.object.property"
+      ],
+      "settings": {
+        "foreground": "@{code.property}"
+      }
+    },
+    {
+      "name": "Property Definitions",
+      "scope": [
+        "support.variable.property",
+        "meta.object-literal.key"
+      ],
+      "settings": {
+        "foreground": "@{code.property.key}"
+      }
+    },
+    {
+      "name": "Special Variables",
+      "scope": [
+        "variable.language.this",
+        "variable.language.self",
+        "variable.language.super",
+        "variable.language.special"
+      ],
+      "settings": {
+        "foreground": "@{code.keyword.self}",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Operators",
+      "scope": [
+        "keyword.operator",
+        "punctuation.accessor"
+      ],
+      "settings": {
+        "foreground": "@{code.operator}"
+      }
+    },
+    {
+      "name": "Punctuation",
+      "scope": [
+        "punctuation.separator",
+        "punctuation.terminator",
+        "punctuation.definition.block",
+        "punctuation.definition.parameters",
+        "punctuation.section"
+      ],
+      "settings": {
+        "foreground": "@{code.punctuation}"
+      }
+    },
+    {
+      "name": "Square Brackets",
+      "scope": [
+        "punctuation.definition.bracket.square",
+        "meta.brace.square"
+      ],
+      "settings": {
+        "foreground": "@{code.bracket.square}"
+      }
+    },
+    {
+      "name": "Angle Brackets",
+      "scope": [
+        "punctuation.definition.typeparameters",
+        "punctuation.definition.tag.begin",
+        "punctuation.definition.tag.end"
+      ],
+      "settings": {
+        "foreground": "@{code.bracket.angle}"
+      }
+    },
+    {
+      "name": "Tag Names",
+      "scope": [
+        "entity.name.tag"
+      ],
+      "settings": {
+        "foreground": "@{code.tag}"
+      }
+    },
+    {
+      "name": "Attribute Names",
+      "scope": [
+        "entity.other.attribute-name"
+      ],
+      "settings": {
+        "foreground": "@{code.attribute}"
+      }
+    },
+    {
+      "name": "HTML Attribute Values",
+      "scope": [
+        "string.quoted.double.html",
+        "string.quoted.single.html"
+      ],
+      "settings": {
+        "foreground": "@{code.attribute.value}"
+      }
+    },
+    {
+      "name": "CSS Selectors",
+      "scope": [
+        "entity.other.attribute-name.class.css",
+        "entity.other.attribute-name.id.css"
+      ],
+      "settings": {
+        "foreground": "@{code.css.selector}"
+      }
+    },
+    {
+      "name": "CSS Properties",
+      "scope": [
+        "support.type.property-name.css",
+        "meta.property-name.css"
+      ],
+      "settings": {
+        "foreground": "@{code.css.property}"
+      }
+    },
+    {
+      "name": "CSS Values",
+      "scope": [
+        "support.constant.property-value.css",
+        "constant.other.color.rgb-value.hex.css",
+        "meta.property-value.css"
+      ],
+      "settings": {
+        "foreground": "@{code.css.value}"
+      }
+    },
+    {
+      "name": "CSS Units",
+      "scope": [
+        "keyword.other.unit.css"
+      ],
+      "settings": {
+        "foreground": "@{code.css.value}"
+      }
+    },
+    {
+      "name": "JSON Keys",
+      "scope": [
+        "support.type.property-name.json",
+        "string.json support.type.property-name.json"
+      ],
+      "settings": {
+        "foreground": "@{code.property.key}"
+      }
+    },
+    {
+      "name": "JSON Values",
+      "scope": [
+        "string.quoted.double.json"
+      ],
+      "settings": {
+        "foreground": "@{code.string}"
+      }
+    },
+    {
+      "name": "Markdown Headings",
+      "scope": [
+        "markup.heading",
+        "entity.name.section.markdown",
+        "punctuation.definition.heading.markdown"
+      ],
+      "settings": {
+        "foreground": "@{code.markup.heading}",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Markdown Bold",
+      "scope": [
+        "markup.bold"
+      ],
+      "settings": {
+        "foreground": "@{code.markup.bold}",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Markdown Italic",
+      "scope": [
+        "markup.italic"
+      ],
+      "settings": {
+        "foreground": "@{code.markup.italic}",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Markdown Code",
+      "scope": [
+        "markup.inline.raw",
+        "markup.fenced_code.block",
+        "markup.raw.block"
+      ],
+      "settings": {
+        "foreground": "@{code.markup.code}"
+      }
+    },
+    {
+      "name": "Markdown Links",
+      "scope": [
+        "markup.underline.link"
+      ],
+      "settings": {
+        "foreground": "@{code.markup.link}"
+      }
+    },
+    {
+      "name": "Markdown List",
+      "scope": [
+        "punctuation.definition.list.begin.markdown"
+      ],
+      "settings": {
+        "foreground": "@{code.markup.list}"
+      }
+    },
+    {
+      "name": "Python Decorators",
+      "scope": [
+        "entity.name.function.decorator.python",
+        "meta.function.decorator.python"
+      ],
+      "settings": {
+        "foreground": "@{code.decorator}",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Python Magic Methods",
+      "scope": [
+        "support.function.magic.python"
+      ],
+      "settings": {
+        "foreground": "@{code.function.magic}"
+      }
+    },
+    {
+      "name": "C/C++ Preprocessor",
+      "scope": [
+        "keyword.control.directive",
+        "meta.preprocessor"
+      ],
+      "settings": {
+        "foreground": "@{code.macro}"
+      }
+    },
+    {
+      "name": "Regular Expressions",
+      "scope": [
+        "string.regexp"
+      ],
+      "settings": {
+        "foreground": "@{code.string.regex}"
+      }
+    },
+    {
+      "name": "Escape Characters",
+      "scope": [
+        "constant.character.escape"
+      ],
+      "settings": {
+        "foreground": "@{code.string.escape}"
+      }
+    },
+    {
+      "name": "Invalid",
+      "scope": [
+        "invalid.illegal"
+      ],
+      "settings": {
+        "foreground": "@{code.invalid}",
+        "fontStyle": "underline"
+      }
+    },
+    {
+      "name": "Deprecated",
+      "scope": [
+        "invalid.deprecated"
+      ],
+      "settings": {
+        "foreground": "@{code.deprecated}",
+        "fontStyle": "underline"
+      }
+    }
+  ],
+  "semanticHighlighting": true,
+  "semanticTokenColors": {
+    "function": "@{code.function.call}",
+    "function.declaration": "@{code.function.definition}",
+    "function.defaultLibrary": "@{code.function.call}",
+    "method": "@{code.function.method}",
+    "method.declaration": "@{code.function.definition}",
+    "variable": "@{code.variable}",
+    "variable.readonly": "@{code.constant.user}",
+    "variable.defaultLibrary": "@{code.constant.language}",
+    "parameter": {
+      "foreground": "@{code.parameter}",
+      "fontStyle": "italic"
+    },
+    "property": "@{code.property}",
+    "property.readonly": "@{code.property.key}",
+    "class": {
+      "foreground": "@{code.class}",
+      "fontStyle": ""
+    },
+    "interface": {
+      "foreground": "@{code.type}",
+      "fontStyle": ""
+    },
+    "struct": {
+      "foreground": "@{code.type}",
+      "fontStyle": ""
+    },
+    "enum": "@{code.type}",
+    "enumMember": "@{code.enum-member}",
+    "type": {
+      "foreground": "@{code.type}",
+      "fontStyle": ""
+    },
+    "typeParameter": {
+      "foreground": "@{code.type}",
+      "fontStyle": ""
+    },
+    "namespace": "@{code.namespace}",
+    "decorator": {
+      "foreground": "@{code.decorator}",
+      "fontStyle": "italic"
+    },
+    "macro": "@{code.macro}"
+  }
+}

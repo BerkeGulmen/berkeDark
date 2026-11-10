@@ -29,7 +29,7 @@ A complete dark environment built around the deep blue of the ocean. One look fo
 | Classes/Types | `#57ab64` |
 | Numbers       | `#ff00ff` |
 | Parameters    | `#ff9e60` |
-| Comments      | `#7f7f7f` |
+| Comments      | `#707070` |
 
 ## Installation
 

@@ -50,20 +50,60 @@ What you get:
   in white, and grey while Claude works.
 - Diffs take berkeDark's syntax colours: keywords `#57bfff`, numbers `#ff00ff`, strings
   `#ffff00`, function and class names `#3f7fff`, punctuation in plain code `#b2d9ff`.
-- In plain text, numbers standing alone are `#e87fe0`, dates and times `#a3a5f5`. Names such as
-  `v10` or `a_9.tex`, list numbers, tool summaries and grey status rows keep their colour.
+- In plain text, numbers standing alone are `#ff00ff`, dates and times `#e87fe0`. Names such as
+  `v10` or `a_9.tex`, tool summaries and grey status rows keep their colour.
+- The text you type into the input box is `#3fff7f`, so it stands apart from the reply text. The hint
+  of an empty box stays dim, and shell mode (`!`) keeps Claude Code's own look.
+- In a reply's text, things Claude Code draws in one colour get their own:
+  - a row that is bold from end to end, a heading line, is `#ff5f07`; headings of level 2 to 4 arrive as such a row
+  - a label, bold words that open a row or a list item and end with a colon, is `#f38ba8`
+  - the hyphen or the number before a list item is `#ff0000`
+  - a task's box becomes `○` in `#ff9e60` or `✓` in `#a9ec76`, right before the task's text
+  - a web address standing alone is `#6fdcf0`; one in brackets after words, a link's address, is `#57bfff`
+  - a table's lines are `#6e7380`, the names of its columns `#b2d9ff` and bold
+  - a rule, written as three hyphens, is drawn as a line across the text in `#6e7380`
+  - the text beside a quote bar is `#f5c2e7`
+- Code in a reply takes berkeDark's colours:
+  - inline code, and a block with no language, is `#a3a5f5`; a word of inline code that is the path of a file is `#ffd25c`
+  - in a block with a language: keywords `#57bfff`, `true`, `null` and their kin `#b2d9ff`, the name of a class
+    `#57ab64`, the name of a function `#3f7fff`, types and shell commands `#3fff7f`, a built-in function that is
+    called `#ffaf1f`, keys of JSON and YAML `#ffbf1f`, strings `#ffff00`, numbers `#ff00ff`, comments `#707070`
+    and slanted, decorators and a preprocessor's own words `#12ab7f`, the signs of plain code `#b2d9ff`
+- A diff's rows stand on the theme's grounds: added `#1d2a2b`, removed `#281a2d`, their changed words `#384c39`
+  and `#51283e`. Claude Code names these in its theme but draws all of them grey with the dark-ansi base.
+- In a diff, an apostrophe inside a comment of several rows no longer turns the rest of the row into a "string".
+- A command line shows its parts: in shell mode (`!`), in the grey line of a running tool and in a `Bash(...)`
+  heading. The name of each command is `#3fff7f`, an option `#ff9e60` and slanted, quoted text `#ffff00`, a
+  variable `#ffdf9f`, a path `#ffd25c`, a number `#ff00ff`, the signs that join commands `#ffffff`.
+- The dim words offered in the input box are `#23874f`; a path in a tool's heading is `#ffd25c`.
 
 Numbers, dates and times get these colours in plain text of every full-screen program (`less`,
-`htop` and so on). The marks and the diff colours apply only when the program is named `claude`.
-The colours are in `src/colours.h`.
+`htop` and so on). The marks, the diff colours and the reply text apply only when the program is
+named `claude`. The colours are in `src/colours.h`.
 
-Tested on Void Linux with foot 1.28 and Claude Code 2.1.319. Not tested: other distributions,
+Tested on Void Linux with foot 1.28 and Claude Code 2.1.322. Not tested: other distributions,
 other terminals and other ways of installing Claude Code. macOS and Windows are not supported.
 
 berkeDark recognises these things from what Claude Code draws, so a later version may lose
 some of the colours or put one in the wrong place until berkeDark is updated. Words and
-numbers are always the ones Claude Code wrote; only `❯` on a sent row is replaced, by `▶`.
+numbers are always the ones Claude Code wrote; only `❯` on a sent row is replaced, by `▶`,
+a task's box by its mark, and a rule's three hyphens by a line.
 A reply line that begins with a tool's word (Read, Found and the like) keeps its numbers plain.
+
+Limits of the reply text: Claude Code draws no frame around a block of code, so the rows of a
+block that its highlighter leaves without colour read as reply text, and a hyphen at the start of
+such a row or an address in it gets the same colour; a box drawn with line characters gets the
+colour of a table's lines. An address
+in brackets cannot be told from a link's address. A long address broken at the end of a row keeps
+its second part plain. The words of a link carry no mark and stay as they are. The reply's first
+row is known by the colour of its mark, the theme's text colour: with another theme, change
+`REPLY_MARK_FOREGROUND` in `src/colours.h`.
+
+Limits of the code colours: Claude Code's highlighter tells few things apart, so parameters,
+variables, methods and operators keep the text colour, and a docstring is a string. A built-in name
+that is not called counts as a type. The path of a file is found by its shape: a name with one
+folder and no known kind of file is not taken for one. foot draws bold text of a regular palette
+colour in the bright one, so bold inline code and a bold path are written one step off their colour.
 
 To remove it: delete `~/.local/bin/berkeDark`, `~/.claude/themes/berkedark.json` and
 `~/.config/foot/berkeDark.ini`, delete the last two lines of `foot.ini` (`[main]` and the
@@ -76,6 +116,5 @@ To remove it: delete `~/.local/bin/berkeDark`, `~/.claude/themes/berkedark.json`
 - `oh-my-zsh/` the berkeDark prompt theme
 - `install.sh` the one-command setup
 - `config/` colour files for foot and Claude Code
-- `docs/look.md` notes on the look (Turkish)
 
 Copyright Berke GÜLMEN. The licence is berkeDark's: see `LICENSE` in the repository's root.

@@ -1,0 +1,21 @@
+# AYNI GÖRÜNENLER: farklı şeyler aynı renkte kalmış; adaylar harfle
+
+# 1. Biten araç işareti bugün yazdığınız metinle ve komut adıyla aynı yeşilde
+  (a) işaret yeşil, temadaki "başarı"   {#a9ec76|●} {chat.tool.name|Read} {chat.tool.argument.path|sample.py}     {#a9ec76|●} {chat.tool.name|Bash} {command.name|ls} {command.option|-la}          {chat.user.input.mark|❯} {chat.user.input.text|yazdığım metin}
+  (b) bugünkü: hepsi bahar yeşili       {#3fff7f|●} {chat.tool.name|Read} {chat.tool.argument.path|sample.py}     {#3fff7f|●} {chat.tool.name|Bash} {command.name|ls} {command.option|-la}          {chat.user.input.mark|❯} {chat.user.input.text|yazdığım metin}
+
+# 2. Başarısız araç işareti. "Çalışıyor" denemede gül olduğu için ikisi yan yana:
+  (a) al kalsın                         {status.running|●} {chat.tool.name|Bash} {command.name|pytest}  çalışıyor          {#ff4455|●} {chat.tool.name|Bash} {command.name|make}  başarısız          {status.error|Hata: hedef bulunamadı}
+  (b) gül, temadaki hata rengi          {status.running|●} {chat.tool.name|Bash} {command.name|pytest}  çalışıyor          {#ff5c7c|●} {chat.tool.name|Bash} {command.name|make}  başarısız          {status.error|Hata: hedef bulunamadı}
+
+# 3. Yanıt işareti bugün gönderdiğiniz mesajın yazısıyla aynı turkuazda
+[[chat.user.message]]{chat.user.message.mark|▶} {chat.user.message.text|Gönderdiğim mesaj}
+  (a) gök mavisi, asistanın kendi rengi {#57bfff|●} Yanıtın ilk satırı
+  (b) bugünkü: turkuaz                  {#6fdcf0|●} Yanıtın ilk satırı
+  (c) yazı rengi, krem                  {#ffe8c2|●} Yanıtın ilk satırı
+
+# 4. Kalan küçük öneriler: kod bloğunun çerçevesi, dil adı ve satır numarası, diff'te bölüm ayırıcı. Hepsi gri tonları
+  {prose.code.block.border|┌─} {prose.code.block.label|python} {prose.code.block.border|─────────────────────────┐}        {diff.gutter| 12   }{code.keyword|return} {code.variable|toplam}
+  {prose.code.block.border|│} {prose.code.block.line-number|1} {code.keyword|def} {code.function.definition|alan}{code.punctuation|(}{code.parameter|r}{code.punctuation|):}                   {prose.code.block.border|│}        {diff.hunk|      …}
+  {prose.code.block.border|│} {prose.code.block.line-number|2}     {code.keyword|return} {code.number|3.14} {code.operator|*} {code.variable|r}            {prose.code.block.border|│}        {diff.gutter| 40   }{code.keyword|def} {code.function.definition|sonraki}{code.punctuation|():}
+  {prose.code.block.border|└──────────────────────────────────┘}

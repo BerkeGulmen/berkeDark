@@ -1,0 +1,41 @@
+# KALIN VE BAŞLIK: üç ayrı kalın ve başlık ölçeği için iki aday
+
+# 1. Yanıtlarımda görünecek hali (iki ölçekte de aynı): kalın satır alev, etiket pembe, cümle içindeki kalın beyaz
+{chat.assistant.mark|●} Kararları işledim; iki görsel gönderdim.
+
+  {#ff5f07;bold|Sorularınız}
+
+  {prose.list.bullet|-} {#f38ba8;bold|Kalın yazı:} Cümle içindeki {prose.strong|önemli söz} beyaz kalıyor.
+  {prose.list.bullet|-} {#f38ba8;bold|Sınama:} Hepsi geçti, {prose.number|102} durum.
+
+  {#ff5f07;bold|Eksik bıraktıklarım}
+
+  {#f38ba8;bold|Not:} Onay kutularını gerçek kayıtla sınamadım.
+
+# 2. Ölçek A, sizin tarifiniz: sarıdan sonra alev ile sarı arası (mandalina), sonra bugünkü 2. ve 3.
+  {prose.heading.1|1. düzey sarı}     {#ff8800;bold|2. düzey mandalina}     {#ffbf1f;bold|3. düzey kehribar}     {#ff9e60;bold|4. düzey turuncu}     {#ff5f07;bold|kalın satır alev}     {#f38ba8;bold|Etiket:} pembe
+
+# 3. Ölçek B, benim önerim: bugünkü 2. ve 3. yerinde kalır, mandalina seyrek olan 4. düzeye gider
+  {prose.heading.1|1. düzey sarı}     {#ffbf1f;bold|2. düzey kehribar}     {#ff9e60;bold|3. düzey turuncu}     {#ff8800;bold|4. düzey mandalina}     {#ff5f07;bold|kalın satır alev}     {#f38ba8;bold|Etiket:} pembe
+
+# 4. Aynı belge, başlıkları ayırabilen araçlarda (Codex, Qwen, düzenleyici). Solda ölçek A, sağda ölçek B
+  {prose.heading.1|Proje notları}                                  {prose.heading.1|Proje notları}
+  {#ff8800;bold|Kurulum}                                        {#ffbf1f;bold|Kurulum}
+  Önce bağımlılıkları kurun.                     Önce bağımlılıkları kurun.
+  {#ffbf1f;bold|Linux}                                          {#ff9e60;bold|Linux}
+  Paket yöneticisini kullanın.                   Paket yöneticisini kullanın.
+  {#ff9e60;bold|Void}                                           {#ff8800;bold|Void}
+  {#f38ba8;bold|Komut:} {prose.code.inline|xbps-install}                            {#f38ba8;bold|Komut:} {prose.code.inline|xbps-install}
+  {#ff5f07;bold|Sık sorulanlar}                                 {#ff5f07;bold|Sık sorulanlar}
+  {#f38ba8;bold|Not:} Yeniden başlatmak gerekmez.               {#f38ba8;bold|Not:} Yeniden başlatmak gerekmez.
+
+# 5. Aynı belge benim penceremde: Claude 2., 3., 4. düzey başlığı ve kalın satırı aynı çizdiği için dördü tek renk olur
+  {prose.heading.1|Proje notları}
+  {#ff5f07;bold|Kurulum}
+  Önce bağımlılıkları kurun.
+  {#ff5f07;bold|Linux}
+  Paket yöneticisini kullanın.
+  {#ff5f07;bold|Void}
+  {#f38ba8;bold|Komut:} {prose.code.inline|xbps-install}
+  {#ff5f07;bold|Sık sorulanlar}
+  {#f38ba8;bold|Not:} Yeniden başlatmak gerekmez.

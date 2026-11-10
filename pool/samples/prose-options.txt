@@ -1,0 +1,43 @@
+# YAZI ÖNERİLERİ: adaylar harfle; (a) bugün havuzda yazılı olan öneri
+
+# 1. Bağlantı: metni ve adresi
+  (a) gök mavisi, altı çizili        Belge {#57bfff;underline|örnek site} ({#57bfff;underline|https://example.org}) adresinde, çıplak adres {#57bfff;underline|https://example.org/yol}.
+  (b) turkuaz, altı çizili           Belge {#6fdcf0;underline|örnek site} ({#6fdcf0;underline|https://example.org}) adresinde, çıplak adres {#6fdcf0;underline|https://example.org/yol}.
+  (c) gök mavisi, çizgisiz           Belge {#57bfff|örnek site} ({#57bfff|https://example.org}) adresinde, çıplak adres {#57bfff|https://example.org/yol}.
+
+# 2. Alıntı
+  (a) açık pembe                     {prose.quote.bar|▎} {#f5c2e7;italic|Bir alıntı satırı: başkasının sözü.}
+  (b) pembe, 4. düzey başlığın rengi {prose.quote.bar|▎} {#f38ba8;italic|Bir alıntı satırı: başkasının sözü.}     {prose.heading.4|Dördüncü düzey başlık}
+  (c) altın, bugün (eğikle aynı)     {prose.quote.bar|▎} {#ffd25c;italic|Bir alıntı satırı: başkasının sözü.}     düz yazıda {prose.emphasis|eğik sözcük}
+
+# 3. Madde işareti ve liste numarası
+  (a) kırmızı, temadaki karar        {#ff0000|-} Birinci madde    {#ff0000|-} İkinci madde    {#ff0000|1.} Numaralı bir    {#ff0000|2.} Numaralı iki    {prose.task.open|○} Yapılacak iş    {prose.task.done|✓} Biten iş
+  (b) turkuaz                        {#6fdcf0|-} Birinci madde    {#6fdcf0|-} İkinci madde    {#6fdcf0|1.} Numaralı bir    {#6fdcf0|2.} Numaralı iki    {prose.task.open|○} Yapılacak iş    {prose.task.done|✓} Biten iş
+  (c) turuncu                        {#ff9e60|-} Birinci madde    {#ff9e60|-} İkinci madde    {#ff9e60|1.} Numaralı bir    {#ff9e60|2.} Numaralı iki    {prose.task.open|○} Yapılacak iş    {prose.task.done|✓} Biten iş
+  (d) renksiz, bugün                 - Birinci madde    - İkinci madde    1. Numaralı bir    2. Numaralı iki    {prose.task.open|○} Yapılacak iş    {prose.task.done|✓} Biten iş
+
+# 4. Tablo başlığı ve çizgileri
+  (a) başlık buz mavisi, çizgi soluk {prose.table.border|│} {#b2d9ff;bold|Ad  } {prose.table.border|│} {#b2d9ff;bold|Değer} {prose.table.border|│}   {prose.table.border|│} alfa {prose.table.border|│}   {prose.number|1}   {prose.table.border|│}
+  (b) başlık gök mavisi              {prose.table.border|│} {#57bfff;bold|Ad  } {prose.table.border|│} {#57bfff;bold|Değer} {prose.table.border|│}   {prose.table.border|│} alfa {prose.table.border|│}   {prose.number|1}   {prose.table.border|│}
+  (c) başlık sarı                    {prose.table.border|│} {#ffff00;bold|Ad  } {prose.table.border|│} {#ffff00;bold|Değer} {prose.table.border|│}   {prose.table.border|│} alfa {prose.table.border|│}   {prose.number|1}   {prose.table.border|│}
+  (d) bugün: hepsi yazı rengi        │ Ad   │ Değer │   │ alfa │   {prose.number|1}   │
+
+# 5. Dosya yolu
+  (a) altın, komut satırındaki gibi  Ayrıntı {#ffd25c|src/main.py:12} satırında.     komut satırı: {shell.prompt.word|in} {shell.prompt.path|~/shared/claude}     eğik yazı: {prose.emphasis|önemli}
+  (b) kum                            Ayrıntı {#ffdf9f|src/main.py:12} satırında.
+  (c) ayrım yok, satır içi kod gibi  Ayrıntı {prose.code.inline|src/main.py:12} satırında.
+
+# 6. Tuş
+  (a) beyaz kalın (kalınla aynı)     Durdurmak için {#fafcff;bold|Ctrl+C} tuşuna basın; bu {prose.strong|kalın yazı}.
+  (b) tuş kapağı: yüksek zemin       Durdurmak için {prose.key+ui.surface.high| Ctrl+C } tuşuna basın; bu {prose.strong|kalın yazı}.
+  (c) satır içi kod gibi             Durdurmak için {prose.code.inline|Ctrl+C} tuşuna basın.
+
+# 7. Kalın yazı
+  (a) beyaz, bugün                   Bu cümlede {#fafcff;bold|önemli olan yer} kalın.
+  (b) alev, temada Markdown kalını   Bu cümlede {#ff5f07;bold|önemli olan yer} kalın.
+  (c) pembe, Codex'teki gibi         Bu cümlede {#f38ba8;bold|önemli olan yer} kalın.
+
+# 8. Satır içi kod
+  (a) lavanta, 7 Kasım kararı        Ayar {#a3a5f5|timeout} ile verilir; bağlantı: {prose.link.url|https://example.org}
+  (b) gök mavisi, Claude'un bugünkü  Ayar {#57bfff|timeout} ile verilir; bağlantı: {prose.link.url|https://example.org}
+  (c) yosun, temada Markdown kodu    Ayar {#57ab64|timeout} ile verilir; bağlantı: {prose.link.url|https://example.org}

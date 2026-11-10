@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "version": "1.2",
+  "name": "berkeDark",
+  "description": "Derin okyanus mavisi koyu tarayici temasi: turkuaz sekme ve simgeler, amber yer imleri. Goz yormayan, okunakli ve sik.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "theme": {
+    "colors": {
+      "frame": [@{kept:browser:frame|csv}],
+      "frame_inactive": [@{kept:browser:frame_inactive|csv}],
+      "frame_incognito": [@{kept:browser:frame_incognito|csv}],
+      "frame_incognito_inactive": [@{kept:browser:frame_incognito_inactive|csv}],
+      "toolbar": [@{kept:browser:toolbar|csv}],
+      "toolbar_text": [@{kept:browser:toolbar_text|csv}],
+      "toolbar_button_icon": [@{kept:browser:toolbar_button_icon|csv}],
+      "button_background": [@{kept:browser:button_background|csv}],
+      "omnibox_background": [@{kept:browser:omnibox_background|csv}],
+      "omnibox_text": [@{kept:browser:omnibox_text|csv}],
+      "bookmark_text": [@{kept:browser:bookmark_text|csv}],
+      "tab_text": [@{kept:browser:tab_text|csv}],
+      "tab_background_text": [@{kept:browser:tab_background_text|csv}],
+      "tab_background_text_inactive": [@{kept:browser:tab_background_text_inactive|csv}],
+      "background_tab": [@{kept:browser:background_tab|csv}],
+      "background_tab_inactive": [@{kept:browser:background_tab_inactive|csv}],
+      "ntp_background": [@{kept:browser:ntp_background|csv}],
+      "ntp_header": [@{kept:browser:ntp_header|csv}],
+      "ntp_text": [@{kept:browser:ntp_text|csv}],
+      "ntp_link": [@{kept:browser:ntp_link|csv}]
+    }
+  }
+}

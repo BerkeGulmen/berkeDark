@@ -1,0 +1,16 @@
+# KOMUT VE KABUK ÖNERİLERİ: adaylar harfle
+
+# 1. Komut satırının parçaları. Aşağıda yalnız komut adının rengi değişiyor.
+# Öbür parçalar temadaki kod kararlarına benzetildi: seçenek turuncu eğik, metin sarı, değişken kum, yol altın, işleç beyaz, sayı magenta, açıklama gri eğik
+  (a) bal, fonksiyon çağrısı gibi  {shell.prompt.character|$} {#ffaf1f|ls} {command.option|-la} {command.path|~/work} {command.operator|\|} {#ffaf1f|grep} {command.string|"pool"} {command.operator|&&} {#ffaf1f|echo} {command.variable|$HOME} {command.number|42} {command.comment|# açıklama}      {#ff5c7c;underline|lss}
+  (b) gök mavisi, anahtar söz gibi {shell.prompt.character|$} {#57bfff|ls} {command.option|-la} {command.path|~/work} {command.operator|\|} {#57bfff|grep} {command.string|"pool"} {command.operator|&&} {#57bfff|echo} {command.variable|$HOME} {command.number|42} {command.comment|# açıklama}      {#ff5c7c;underline|lss}
+  (c) bahar yeşili, program gibi   {shell.prompt.character|$} {#3fff7f|ls} {command.option|-la} {command.path|~/work} {command.operator|\|} {#3fff7f|grep} {command.string|"pool"} {command.operator|&&} {#3fff7f|echo} {command.variable|$HOME} {command.number|42} {command.comment|# açıklama}      {#ff5c7c;underline|lss}
+  (d) bugün: ayrım yok             {shell.prompt.character|$} ls -la ~/work | grep "pool" && echo $HOME 42 # açıklama      lss
+
+# 2. Dosya türleri (ls)
+  (a) öneri                {shell.file.directory|klasor/}  {shell.file.executable|calisir.sh}  {shell.file.link|kisayol -> hedef}  {shell.file.link.broken|kopuk -> yok}  {shell.file.archive|yedek.tar.gz}  {shell.file.image|ekran.png}  {shell.file.audio|ses.mp3}  {shell.file.document|notlar.md}  {shell.file.hidden|.gizli}  {shell.file.device|tty1}
+  (b) bugün, ls'nin düzeni {#57bfff;bold|klasor/}  {#3fff7f;bold|calisir.sh}  {#6fdcf0;bold|kisayol -> hedef}  {#ff5c7c;bold|kopuk -> yok}  {#ff5c7c;bold|yedek.tar.gz}  {#ff00ff;bold|ekran.png}  {#12ab7f|ses.mp3}  notlar.md  .gizli  {#ffff00;bold|tty1}
+
+# 3. Aramada bulunan söz (grep)
+  (a) öneri: sarı kalın, bulunan zemininde      havuzdaki {shell.match|pool} sözcüğü, bir de {shell.match|pool}
+  (b) bugün, grep'in düzeni: gül kalın          havuzdaki {#ff5c7c;bold|pool} sözcüğü, bir de {#ff5c7c;bold|pool}

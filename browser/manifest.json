@@ -11,106 +11,26 @@
   },
   "theme": {
     "colors": {
-      "frame": [
-        7,
-        15,
-        31
-      ],
-      "frame_inactive": [
-        5,
-        11,
-        23
-      ],
-      "frame_incognito": [
-        5,
-        11,
-        22
-      ],
-      "frame_incognito_inactive": [
-        4,
-        8,
-        17
-      ],
-      "toolbar": [
-        7,
-        15,
-        31
-      ],
-      "toolbar_text": [
-        232,
-        244,
-        252
-      ],
-      "toolbar_button_icon": [
-        111,
-        220,
-        240
-      ],
-      "button_background": [
-        27,
-        52,
-        81
-      ],
-      "omnibox_background": [
-        14,
-        28,
-        46
-      ],
-      "omnibox_text": [
-        232,
-        244,
-        252
-      ],
-      "bookmark_text": [
-        255,
-        184,
-        56
-      ],
-      "tab_text": [
-        111,
-        220,
-        240
-      ],
-      "tab_background_text": [
-        206,
-        166,
-        134
-      ],
-      "tab_background_text_inactive": [
-        150,
-        124,
-        102
-      ],
-      "background_tab": [
-        7,
-        15,
-        31
-      ],
-      "background_tab_inactive": [
-        5,
-        11,
-        23
-      ],
-      "ntp_background": [
-        7,
-        15,
-        31
-      ],
-      "ntp_header": [
-        7,
-        15,
-        31
-      ],
-      "ntp_text": [
-        232,
-        244,
-        252
-      ],
-      "ntp_link": [
-        255,
-        184,
-        56
-      ]
+      "frame": [7, 15, 31],
+      "frame_inactive": [5, 11, 23],
+      "frame_incognito": [5, 11, 22],
+      "frame_incognito_inactive": [4, 8, 17],
+      "toolbar": [7, 15, 31],
+      "toolbar_text": [232, 244, 252],
+      "toolbar_button_icon": [111, 220, 240],
+      "button_background": [27, 52, 81],
+      "omnibox_background": [14, 28, 46],
+      "omnibox_text": [232, 244, 252],
+      "bookmark_text": [255, 184, 56],
+      "tab_text": [111, 220, 240],
+      "tab_background_text": [206, 166, 134],
+      "tab_background_text_inactive": [150, 124, 102],
+      "background_tab": [7, 15, 31],
+      "background_tab_inactive": [5, 11, 23],
+      "ntp_background": [7, 15, 31],
+      "ntp_header": [7, 15, 31],
+      "ntp_text": [232, 244, 252],
+      "ntp_link": [255, 184, 56]
     }
   }
 }

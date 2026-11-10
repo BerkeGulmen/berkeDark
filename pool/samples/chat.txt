@@ -1,0 +1,32 @@
+# Sohbet sınıfları: bir yapay zekâ ile konuşmanın parçaları
+[[chat.user.message]]{chat.user.message.mark|▶} {chat.user.message.text|sample.py dosyasında 0.874 değerini 0.875 yap ve sınamaları çalıştır}
+
+{chat.thinking.text|∴ Düşünme: önce dosyayı okumalıyım, sonra tek satırı değiştiririm.}
+
+{chat.tool.mark.done|●} {chat.tool.name|Read} {chat.tool.argument.path|sample.py}
+  {chat.tool.summary|⎿ 8 satır okundu}
+{chat.tool.mark.done|●} {chat.tool.name|Update} {chat.tool.argument.path|sample.py}     {chat.tool.mark.done|●} {chat.tool.name|Search} {chat.tool.argument.pattern|"deficit"}
+  {chat.tool.summary|⎿ 1 satır eklendi, 1 satır silindi}
+{chat.tool.mark.running|●} {chat.tool.name|Bash} {command.name|pytest} {command.option|-q} {command.path|tests/} {command.operator|\|} {command.name|tail} {command.option|-n} {command.number|3}
+{chat.tool.mark.failed|●} {chat.tool.name|Bash} {command.name|make} {command.argument|yayin}
+  {status.error|Hata: hedef bulunamadı}   {status.warning|Uyarı: önbellek eski}   {status.success|Tamam: 12 sınama geçti}   {status.info|Bilgi: 3 dosya değişti}
+
+{chat.assistant.mark|●} Değeri {prose.number|0.875} yaptım; sınamalar geçti. Ayrıntı {prose.path|sample.py:5} satırında, belge {prose.link.url|https://example.org/belge} adresinde.
+
+{chat.notice|✻ 12 saniyede bitti · 12:38}
+
+# Soru kutusu ve yardımcılar
+  {chat.dialog.title|Bu komut çalıştırılsın mı?}
+  {chat.dialog.option.selected|❯ 1. Evet}   {chat.dialog.key|(y)}
+  {chat.dialog.option|  2. Hayır}  {chat.dialog.key|(esc)}
+  Yardımcılar: {chat.agent.1|● bir} {chat.agent.2|● iki} {chat.agent.3|● üç} {chat.agent.4|● dört} {chat.agent.5|● beş} {chat.agent.6|● altı} {chat.agent.7|● yedi} {chat.agent.8|● sekiz}     {status.running|✻ Çalışıyor…}   {chat.brand|Claude}   {chat.suggestion|/model}   {chat.usage.used|████████}{chat.usage.free|░░░░░░} %57
+
+# Giriş kutusu ve kipler
+{chat.user.input.border.focus|────────────────────────────────────────────────────────────────────────────────}
+{chat.user.input.mark|❯} {chat.user.input.text|Şu an yazdığım metin, 2026 ve 3.5 gibi sayılarla}                                 odaklı kutu
+{chat.user.input.border.focus|────────────────────────────────────────────────────────────────────────────────}
+{chat.user.input.border|────────────────────────────────────────────────────────────────────────────────}
+{chat.user.input.mark.busy|❯} {chat.user.input.placeholder|Bir şey yazın…}     {chat.user.input.mark|❯} {chat.user.input.text|sıradaki}{chat.user.input.suggestion| mesaj için öneri}                           odaksız kutu
+{chat.user.input.border|────────────────────────────────────────────────────────────────────────────────}
+{chat.mode.shell|!} {command.name|ls} {command.option|-la} {command.path|~/work}                                                                kabuk kipinde yazılan
+{chat.mode.auto|⏵⏵ otomatik kip}   {chat.mode.plan|⏸ plan kipi}   {chat.mode.accept|⏵⏵ düzenlemeleri kabul}   {chat.mode.shell|! kabuk kipi}   {chat.mode.fast|↯ hızlı kip}   {chat.memory|# hatırlama}

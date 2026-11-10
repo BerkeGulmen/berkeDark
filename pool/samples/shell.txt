@@ -1,0 +1,12 @@
+# Kabuk: komut satırı, komutun parçaları, dosya türleri
+{shell.prompt.word|#} {shell.prompt.user|kar} {shell.prompt.word|@} {shell.prompt.host|void} {shell.prompt.word|in} {shell.prompt.path|~/shared/claude/work} {shell.prompt.word|on} {shell.prompt.branch|main} {shell.prompt.branch.dirty|x} {shell.prompt.word|with} {shell.prompt.environment|.venv} {shell.prompt.time|[2026-11-10 14:02:11]} {shell.prompt.status|C:1}
+{shell.prompt.character|$} {command.name|ls} {command.option|-la} {command.path|~/work} {command.operator|\|} {command.name|grep} {command.string|"pool"} {command.operator|&&} {command.name|echo} {command.variable|$HOME} {command.number|42} {command.comment|# açıklama}
+{shell.file.directory|berkeDark-pool/}  {shell.file.executable|build.sh}  {shell.file.link|latest -> v2}  {shell.file.link.broken|eski -> yok}  {shell.file.archive|yedek.tar.gz}  {shell.file.image|ekran.png}  {shell.file.audio|ses.mp3}  {shell.file.document|notlar.md}  {shell.file.hidden|.gitignore}  {shell.file.device|tty1}
+havuzdaki {shell.match|pool} sözcüğü bulundu          {command.unknown|lss}: komut bulunamadı          {shell.prompt.word|#} {shell.prompt.user.root|root} {shell.prompt.word|@} {shell.prompt.host|void} {shell.prompt.branch|main} {shell.prompt.branch.clean|o}
+
+# Dosya durumları (sürüm denetimi)
+{vcs.added|A yeni.py}   {vcs.modified|M degisen.py}   {vcs.deleted|D silinen.py}   {vcs.untracked|? izlenmeyen.py}   {vcs.ignored|! yoksayilan.log}   {vcs.conflict|U cakisan.py}
+
+# Terminalin on altı rengi
+{ansi.black+ui.surface.high| siyah }{ansi.red| kırmızı }{ansi.green| yeşil }{ansi.yellow| sarı }{ansi.blue| mavi }{ansi.magenta| eflatun }{ansi.cyan| camgöbeği }{ansi.white| beyaz }
+{ansi.bright-black| parlak siyah }{ansi.bright-red| parlak kırmızı }{ansi.bright-green| parlak yeşil }{ansi.bright-yellow| parlak sarı }{ansi.bright-blue| parlak mavi }{ansi.bright-magenta| parlak eflatun }{ansi.bright-cyan| parlak camgöbeği }{ansi.bright-white| parlak beyaz }

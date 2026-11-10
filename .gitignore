@@ -1,0 +1,4 @@
+# built files
+terminal/build/
+pool/build/
+__pycache__/

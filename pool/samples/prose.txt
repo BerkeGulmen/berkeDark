@@ -1,0 +1,34 @@
+# Yazı sınıfları, havuzdaki değerlerle (öneriler dahil)
+{chat.assistant.mark|●} {prose.heading.1|Birinci düzey başlık}
+
+  {prose.heading.2|İkinci düzey başlık}
+
+  {prose.heading.3|Üçüncü düzey başlık}
+
+  {prose.heading.4|Dördüncü düzey başlık}
+
+  {prose.heading.line|Kalın satır: işaretsiz başlık}
+
+  {prose.label|Etiket:} Düz yazı, {prose.strong|kalın yazı}, {prose.emphasis|eğik yazı}, {prose.strong-emphasis|kalın eğik}, {prose.strike|üstü çizili} ve {prose.code.inline|satır içi kod}. Sayılar: {prose.number|42}, {prose.number|3.14}, {prose.number|%15}; tarih {prose.date|2026-11-10}, saat {prose.date|12:38}.
+  Bağlantı: {prose.link.text|örnek site} ({prose.link.url|https://example.org}), çıplak adres {prose.link.bare|https://example.org/yol}. Dosya: {prose.path|src/main.py:12}. Tuş: {prose.key| Ctrl+C }.
+
+  {prose.quote.bar|▎} {prose.quote.text|Bir alıntı satırı: başkasının sözü.}
+
+  {prose.list.bullet|-} Birinci madde
+    {prose.list.bullet|-} İç madde
+  {prose.task.open|○} Yapılacak iş
+  {prose.task.done|✓} Biten iş
+
+  {prose.list.number|1.} Numaralı bir
+  {prose.list.number|2.} Numaralı iki
+
+  {prose.table.border|┌──────┬───────┐}
+  {prose.table.border|│} {prose.table.header| Ad } {prose.table.border|│} {prose.table.header|Değer} {prose.table.border|│}
+  {prose.table.border|├──────┼───────┤}
+  {prose.table.border|│} alfa {prose.table.border|│}   {prose.number|1}   {prose.table.border|│}
+  {prose.table.border|│} beta {prose.table.border|│}   {prose.number|2}   {prose.table.border|│}
+  {prose.table.border|└──────┴───────┘}
+
+  {prose.rule|────────────────────────────────────────}
+
+  Aramada bulunan: havuzdaki {base.match|sınıf} sözcüğü; öbür bulunanlar: {base.match.other|sınıf}, {base.match.other|sınıf}.

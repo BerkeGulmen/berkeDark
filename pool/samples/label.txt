@@ -1,0 +1,18 @@
+# ETİKET ÖNERİSİ: kalının iki ayrı kullanımı var. Cümle içindeki önemli söz beyaz kalıyor; satır başındaki etiket ayrılabilir.
+
+# (a) etiket pembe; 4. düzey başlık aleve geçer, ölçek: sarı, kehribar, turuncu, alev
+  {prose.list.bullet|-} {#f38ba8;bold|Kurulu dosya:} İçindeki renk değeri doğru; bu cümlede {prose.strong|önemli söz} beyaz kalır.
+  {prose.list.bullet|-} {#f38ba8;bold|Sınama:} Hepsi geçti, {prose.number|102} durum.
+  {#f38ba8;bold|Sonuç:} Kurulabilir.
+  başlıklar: {prose.heading.1|Birinci}   {prose.heading.2|İkinci}   {prose.heading.3|Üçüncü}   {#ff5f07;bold|Dördüncü}
+
+# (b) etiket alev; 4. düzey başlık pembe kalır
+  {prose.list.bullet|-} {#ff5f07;bold|Kurulu dosya:} İçindeki renk değeri doğru; bu cümlede {prose.strong|önemli söz} beyaz kalır.
+  {prose.list.bullet|-} {#ff5f07;bold|Sınama:} Hepsi geçti, {prose.number|102} durum.
+  {#ff5f07;bold|Sonuç:} Kurulabilir.
+  başlıklar: {prose.heading.1|Birinci}   {prose.heading.2|İkinci}   {prose.heading.3|Üçüncü}   {#f38ba8;bold|Dördüncü}
+
+# (c) ayrım yok: etiket de beyaz kalın, bugünkü gibi
+  {prose.list.bullet|-} {prose.strong|Kurulu dosya:} İçindeki renk değeri doğru; bu cümlede {prose.strong|önemli söz} beyaz kalır.
+  {prose.list.bullet|-} {prose.strong|Sınama:} Hepsi geçti, {prose.number|102} durum.
+  {prose.strong|Sonuç:} Kurulabilir.

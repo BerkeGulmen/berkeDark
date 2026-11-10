@@ -1,0 +1,30 @@
+# Kod sınıfları: temada tek tek verilmiş kararlar (bir düzenleyicinin ayırabildiği kadarıyla)
+{code.keyword.module|import} {code.namespace|math}
+{code.keyword.module|from} {code.namespace|typing} {code.keyword.module|import} {code.type|Optional}
+
+{code.decorator|@dataclass}
+{code.keyword|class} {code.class|Pack}{code.punctuation|:}
+    {code.docstring|"""Bir batarya paketi."""}
+    {code.constant.user|MAX_CELLS} {code.operator|=} {code.number|16}
+    {code.variable.definition|cells}{code.punctuation|:} {code.type|int} {code.operator|=} {code.number|12}
+
+    {code.keyword|def} {code.function.definition|energy}{code.punctuation|(}{code.keyword.self|self}{code.punctuation|,} {code.parameter|volts}{code.punctuation|:} {code.type|float}{code.punctuation|,} {code.parameter|label}{code.operator|=}{code.string|"paket}{code.string.escape|\\n}{code.string|"}{code.punctuation|)} {code.operator|->} {code.type|Optional}{code.bracket.square|[}{code.type|float}{code.bracket.square|]}{code.punctuation|:}
+        {code.comment|# hücre başına enerji, yaklaşık}
+        {code.keyword|if} {code.keyword.self|self}{code.punctuation|.}{code.property|cells} {code.keyword|is} {code.constant.language|None}{code.punctuation|:}
+            {code.keyword|return} {code.constant.language|None}
+        {code.variable|total} {code.operator|=} {code.function.call|round}{code.punctuation|(}{code.variable|volts} {code.operator|*} {code.keyword.self|self}{code.punctuation|.}{code.property|cells}{code.punctuation|,} {code.number|2}{code.punctuation|)}
+        {code.keyword|return} {code.namespace|math}{code.punctuation|.}{code.function.method|sqrt}{code.punctuation|(}{code.variable|total}{code.punctuation|)} {code.keyword|if} {code.function.call|match}{code.punctuation|(}{code.string.regex|r"^\\d+$"}{code.punctuation|,} {code.variable|label}{code.punctuation|)} {code.keyword|else} {code.number|0.5}
+
+    {code.keyword|def} {code.function.magic|__repr__}{code.punctuation|(}{code.keyword.self|self}{code.punctuation|):} {code.keyword|return} {code.string|"Pack"}
+
+# JSON, HTML, CSS, C, ayraç derinliği, Markdown kaynağı, hatalı kod
+{code.punctuation|\{}{code.property.key|"ad"}{code.punctuation|:} {code.string|"deneme"}{code.punctuation|,} {code.property.key|"sayi"}{code.punctuation|:} {code.number|7}{code.punctuation|,} {code.property.key|"acik"}{code.punctuation|:} {code.constant.language|true}{code.punctuation|\}}
+{code.bracket.angle|<}{code.tag|div} {code.attribute|class}{code.operator|=}{code.attribute.value|"kutu"}{code.bracket.angle|>}metin{code.bracket.angle|</}{code.tag|div}{code.bracket.angle|>}      {code.css.selector|.kutu} {code.punctuation|\{} {code.css.property|margin}{code.punctuation|:} {code.css.value|12px}{code.punctuation|;} {code.punctuation|\}}      {code.macro|#include} {code.string|<stdio.h>}
+{code.bracket.pair.1|(}{code.bracket.pair.2|(}{code.bracket.pair.3|(}{code.bracket.pair.4|(}{code.bracket.pair.5|(}{code.bracket.pair.6|(}x{code.bracket.pair.6|)}{code.bracket.pair.5|)}{code.bracket.pair.4|)}{code.bracket.pair.3|)}{code.bracket.pair.2|)}{code.bracket.pair.1|)}      {code.markup.heading|## Başlık}  {code.markup.bold|**kalın**}  {code.markup.italic|*eğik*}  {code.markup.code|`kod`}  {code.markup.link|[bağlantı](adres)}  {code.markup.list|-} madde      {code.invalid|hatalı kod}  {code.deprecated|eskimiş kod}
+
+# Diff: eklenen ve silinen satırlar
+{diff.gutter| 4   }{code.keyword|if} {code.variable|p_hover} {code.keyword|is} {code.constant.language|None}{code.punctuation|:}
+[[diff.removed]]{diff.removed.mark| 5 - }{diff.removed.text|    return 0.}{diff.removed.text+diff.removed.word|874}{diff.removed.text| * p_hover}
+[[diff.added]]{diff.added.mark| 5 + }    {code.keyword|return} {code.number|0.}{code.number+diff.added.word|875} {code.operator|*} {code.variable|p_hover}
+{diff.gutter| 6   }{code.keyword|return} {code.variable|p_hover} {code.operator|/} {code.variable|eta_bus}
+{diff.hunk|     …}

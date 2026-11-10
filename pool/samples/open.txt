@@ -1,0 +1,30 @@
+# AÇIK KONULAR: adaylar harfle; her satır aynı örneği başka bir adayla gösterir
+
+# 1. Kodda noktalama: parantez, virgül, iki nokta
+  (a) gri, temadaki karar            {code.keyword|def} {code.function.definition|energy}{#8f95a0|(}{code.keyword.self|self}{#8f95a0|,} {code.parameter|volts}{#8f95a0|:} {code.type|float}{#8f95a0|,} {code.parameter|label}{code.operator|=}{code.string|"paket"}{#8f95a0|)} {code.operator|->} {code.type|Optional}{code.bracket.square|[}{code.type|float}{code.bracket.square|]}{#8f95a0|:}
+  (b) buz mavisi, 8 Kasım (terminal) {code.keyword|def} {code.function.definition|energy}{#b2d9ff|(}{code.keyword.self|self}{#b2d9ff|,} {code.parameter|volts}{#b2d9ff|:} {code.type|float}{#b2d9ff|,} {code.parameter|label}{code.operator|=}{code.string|"paket"}{#b2d9ff|)} {code.operator|->} {code.type|Optional}{code.bracket.square|[}{code.type|float}{code.bracket.square|]}{#b2d9ff|:}
+
+# 2. Tarih ve saat (satır içi kod lavanta, sayı magenta)
+  (a) lavanta, bugün                 Toplantı {#a3a5f5|2026-11-10} günü saat {#a3a5f5|12:38}'de; {prose.code.inline|timeout} ayarı {prose.number|30} saniye.
+  (b) yumuşak magenta, yedekteki     Toplantı {#e87fe0|2026-11-10} günü saat {#e87fe0|12:38}'de; {prose.code.inline|timeout} ayarı {prose.number|30} saniye.
+
+# 3. Terminalin on altı rengi: programlar bu renkleri adıyla ister
+  (a) foot'taki, bugün               {#585c66|(zemin)} {#ff4455|kırmızı} {#a9ec76|yeşil} {#ffd25c|sarı} {#3f7fff|mavi} {#a3a5f5|eflatun} {#12ab7f|camgöbeği} {#ffe8c2|beyaz}   parlak: {#6e7380|siyah} {#ff9e60|kırmızı} {#3fff7f|yeşil} {#ffff00|sarı} {#57bfff|mavi} {#ff00ff|eflatun} {#6fdcf0|camgöbeği} {#fafcff|beyaz}
+  (b) aynısı, parlak kırmızı gül     {#585c66|(zemin)} {#ff4455|kırmızı} {#a9ec76|yeşil} {#ffd25c|sarı} {#3f7fff|mavi} {#a3a5f5|eflatun} {#12ab7f|camgöbeği} {#ffe8c2|beyaz}   parlak: {#6e7380|siyah} {#ff5c7c|kırmızı} {#3fff7f|yeşil} {#ffff00|sarı} {#57bfff|mavi} {#ff00ff|eflatun} {#6fdcf0|camgöbeği} {#fafcff|beyaz}
+  (c) temanın kendi terminal paleti  {#585c66|(zemin)} {#ff4455|kırmızı} {#a9ec76|yeşil} {#ffd25c|sarı} {#78dcf8|mavi} {#a3a5f5|eflatun} {#6fdcf0|camgöbeği} {#fafcff|beyaz}   parlak: {#6e7380|siyah} {#ff6688|kırmızı} {#a9ff76|yeşil} {#ffe866|sarı} {#78dcff|mavi} {#a3a5f5|eflatun} {#6fdcf0|camgöbeği} {#fafcff|beyaz}
+      parlak kırmızının göründüğü yer: silinen satır işareti   (a) {#ff9e60| 5 -}   (b) {#ff5c7c| 5 -}   (c) {#ff6688| 5 -}      kabuk kipi   (a) {#ff9e60|! ls}   (b) {#ff5c7c|! ls}
+
+# 4. Yazarken görünen metin (deneme sürüyor)
+  (a) bahar yeşili, deneme           {chat.user.input.mark|❯} {#3fff7f|Şu an yazdığım metin, 2026 ve 3.5 gibi sayılarla}
+  (b) saf yeşil                      {chat.user.input.mark|❯} {#00ff00|Şu an yazdığım metin, 2026 ve 3.5 gibi sayılarla}
+  (c) camgöbeği, temada giriş alanı  {chat.user.input.mark|❯} {#00ffff|Şu an yazdığım metin, 2026 ve 3.5 gibi sayılarla}
+
+# 5. "Çalışıyor" rengi: süren bir iş
+  (a) gök mavisi, Claude'un bugünkü  {#57bfff|●} {chat.tool.name|Bash} {command.name|pytest} {command.option|-q}    {#57bfff|✻ Çalışıyor…}
+  (b) gül, temada ilerleme çubuğu    {#ff5c7c|●} {chat.tool.name|Bash} {command.name|pytest} {command.option|-q}    {#ff5c7c|✻ Çalışıyor…}
+
+# 6. Odaklı kutunun kenarlığı: klavyenin o an bağlı olduğu kutu
+  (a) ayrım yok, temadaki gibi       {#6e7380|──────────────────────────────}  {#6e7380|──────────────────────────────}
+  (b) gül, temada "etkin" çizgisi    {#ff5c7c|──────────────────────────────}  {#6e7380|──────────────────────────────}
+  (c) gök mavisi, Qwen'deki gibi     {#57bfff|──────────────────────────────}  {#6e7380|──────────────────────────────}
+                                     odaklı kutu                     odaksız kutu

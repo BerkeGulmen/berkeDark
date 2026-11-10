@@ -1,0 +1,24 @@
+# SOHBET ÖNERİLERİ: adaylar harfle
+
+# 1. Düşünme yazısı: asistanın akıl yürütmesi, gösterildiği araçlarda
+  (a) soluk gri, eğik              {#6e7380;italic|∴ Düşünme: önce dosyayı okumalıyım, sonra tek satırı değiştiririm.}
+  (b) ikincil gri, eğik            {#8f95a0;italic|∴ Düşünme: önce dosyayı okumalıyım, sonra tek satırı değiştiririm.}
+  (c) lavanta, eğik                {#a3a5f5;italic|∴ Düşünme: önce dosyayı okumalıyım, sonra tek satırı değiştiririm.}
+
+# 2. Araç argümanı: araca verilen şey
+  (a) gri: araç adı öne çıksın     {chat.tool.mark.done|●} {chat.tool.name|Read} {#8f95a0|sample.py}     {chat.tool.mark.done|●} {chat.tool.name|Bash} {#8f95a0|ls -la ~/work \| grep "pool"}     {chat.tool.mark.done|●} {chat.tool.name|Search} {#8f95a0|"deficit"}
+  (b) bugün: yazı rengi            {chat.tool.mark.done|●} {chat.tool.name|Read} sample.py     {chat.tool.mark.done|●} {chat.tool.name|Bash} ls -la ~/work | grep "pool"     {chat.tool.mark.done|●} {chat.tool.name|Search} "deficit"
+  (c) ne ise onun rengi            {chat.tool.mark.done|●} {chat.tool.name|Read} {prose.path|sample.py}     {chat.tool.mark.done|●} {chat.tool.name|Bash} {command.name|ls} {command.option|-la} {command.path|~/work} {command.operator|\|} {command.name|grep} {command.string|"pool"}     {chat.tool.mark.done|●} {chat.tool.name|Search} {command.string|"deficit"}
+
+# 3. Yardımcıların renkleri: aynı anda çalışan sekiz yardımcı
+  (a) öneri                        {#ff4455|● bir}  {#3f7fff|● iki}  {#a9ec76|● üç}  {#ffd25c|● dört}  {#a3a5f5|● beş}  {#ff9e60|● altı}  {#f38ba8|● yedi}  {#6fdcf0|● sekiz}
+  (b) daha canlı                   {#ff5c7c|● bir}  {#57bfff|● iki}  {#3fff7f|● üç}  {#ffff00|● dört}  {#ff00ff|● beş}  {#ff8800|● altı}  {#f38ba8|● yedi}  {#6fdcf0|● sekiz}
+
+# 4. Öneri yazısı: aracın sizin yerinize yazmayı önerdiği devam
+  (a) soluk gri                    {chat.user.input.mark|❯} {chat.user.input.text|sıradaki}{#6e7380| mesaj için öneri}
+  (b) yazdığınız rengin soluğu     {chat.user.input.mark|❯} {chat.user.input.text|sıradaki}{#23874f| mesaj için öneri}
+
+# 5. Kabuk kipinde yazdığınız komut: ! ile başlayan giriş
+  (a) komut renkleriyle            {chat.mode.shell|!} {command.name|ls} {command.option|-la} {command.path|~/work} {command.operator|\|} {command.name|grep} {command.string|"pool"}
+  (b) yazdığınız metnin rengiyle   {chat.mode.shell|!} {chat.user.input.text|ls -la ~/work \| grep "pool"}
+  (c) bugün: yazı rengi            {chat.mode.shell|!} ls -la ~/work | grep "pool"

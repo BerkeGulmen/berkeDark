@@ -45,7 +45,7 @@ row(swatch("070f1f", "zemin"), swatch("ffe8c2", "yazı"), swatch("ff9e60", "imle
 heading("Terminal: 16 renk paleti")
 names = [
     (0, "070f1f", "0 zeminle aynı"), (8, "6e7380", "8 parlak siyah"),
-    (1, "ff4455", "1 kırmızı"), (9, "ff9e60", "9 parlak kırmızı"),
+    (1, "ff4455", "1 kırmızı"), (9, "ff5c7c", "9 parlak kırmızı"),
     (2, "a9ec76", "2 yeşil"), (10, "3fff7f", "10 parlak yeşil"),
     (3, "ffd25c", "3 sarı"), (11, "ffff00", "11 parlak sarı"),
     (4, "3f7fff", "4 mavi"), (12, "57bfff", "12 parlak mavi"),

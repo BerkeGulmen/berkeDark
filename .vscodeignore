@@ -13,3 +13,4 @@ browser/**
 *.vsix
 !LICENSE-NONCOMMERCIAL.md
 !LICENSE-INTERNAL-USE.md
+pool/**
