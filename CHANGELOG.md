@@ -4,6 +4,26 @@ All notable changes to the "berkeDark" extension will be documented in this file
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-10
+
+### Added
+- One source: every file that carries a colour (this theme, the browser theme, the terminal's files, the AI tools' themes, the colour codes in the README files) is written from `pool/pool.json` by `pool/tools/generate.py`
+- Claude Code, in the terminal: a reply's text gets berkeDark's colours for heading lines, labels, list marks, task marks, web addresses, tables, rules and quotes; for inline code, the paths of files and the words of fenced code; for command lines in shell mode and in tool rows; and for the dim words offered in the input box
+- Claude Code: a diff's added and removed rows stand on the theme's own grounds
+- Themes for Qwen Code and Codex in `cli`, and the setting that gives Grok the terminal's colours
+
+### Changed
+- Punctuation in code is ice blue (`#b2d9ff`), as on the terminal
+- The integrated terminal's sixteen colours are the same as the terminal palette's
+- The cursor is orange (`#ff9e60`), as in the terminal
+- Claude Code: dates and times are `#e87fe0`; the working mark, errors and a removed row's mark are rose `#ff5c7c`; the text typed into the input box is `#3fff7f`
+
+### Fixed
+- Terminal colour interpreter: the digit of an older number could be written back over the blank between two words
+- Terminal colour interpreter: the cells of emoji sequences are counted as the terminal counts them
+- Terminal colour interpreter: in a diff, an apostrophe inside a comment of several rows no longer starts a "string"
+- The README named a wrong colour for comments (`#7f7f7f`); it is `#707070`
+
 ## [1.2.1] - 2026-11-09
 
 ### Changed

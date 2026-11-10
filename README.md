@@ -1,12 +1,13 @@
 # berkeDark
 
-A complete dark environment built around the deep blue of the ocean. One look for your editor, your web browser and your terminal.
+A complete dark environment built around the deep blue of the ocean. One look for your editor, your web browser, your terminal and the AI tools you run in it.
 
 | Where | What you get |
 |---|---|
 | **VS Code** | A full colour theme: editor, syntax, sidebar, tabs and integrated terminal |
 | **Web browser** | A Chrome theme: deep blue frame, turquoise tabs and icons, amber bookmarks |
 | **Terminal** | A colour interpreter, colour files and an oh-my-zsh theme: italic, strikethrough and headings each get their own colour, in any program |
+| **AI tools** | Claude Code, Qwen Code, Codex and Grok in the same colours: replies, code, diffs and command lines |
 
 ![README Preview](./preview-readme.png)
 ![Python Preview](./preview-python.png)
@@ -65,6 +66,9 @@ Every program started from that shell then shows its styles in berkeDark's colou
 ### Claude Code
 On Linux, `sh terminal/install.sh` gives Claude Code's full-screen interface the berkeDark look. It changes Claude Code's theme and display settings and keeps a backup of what it replaces; `terminal/README.md` says what it does, what was tested and how to remove it.
 
+### Qwen Code, Codex, Grok
+The `cli` folder holds berkeDark's theme for Qwen Code and for Codex, and the one setting that gives Grok the terminal's colours. `cli/README.md` says where each file goes and what each tool can show.
+
 ### oh-my-zsh
 Copy `terminal/oh-my-zsh/berkeDark.zsh-theme` to `~/.oh-my-zsh/custom/themes/` and set `ZSH_THEME="berkeDark"` in `~/.zshrc`. Before each command it shows who you are, the machine, the folder, the git branch and the date and time. The line starts with `#`, so it does nothing if you copy and run it.
 
@@ -94,8 +98,11 @@ Optimized syntax highlighting for:
 - Markdown
 - And many more...
 
+## One source
+Every colour here comes from one file, `pool/pool.json`: the colours by name and the things that use them. The theme, the browser theme, the terminal's files, the AI tools' themes and the colour codes in this text are written from it by `pool/tools/generate.py`, so a colour is decided once and looks the same everywhere. `pool/README.md` explains it.
+
 ## Contributing
-Found an issue or want to suggest an improvement? Open an issue or pull request on [GitHub](https://github.com/BerkeGulmen/berkedark-vscode).
+Found an issue or want to suggest an improvement? Open an issue or pull request on [GitHub](https://github.com/BerkeGulmen/berkeDark).
 
 By sending a pull request you agree that your contribution may be distributed under all of berkeDark's licenses, including the commercial one.
 
