@@ -25,8 +25,9 @@ Colours live in `src/colours.h`: italic, bold italic, strikethrough, and top hea
 (bold, italic and underlined at once). Text a program coloured itself keeps its colour, and
 so does dim text.
 
-To start it in every new foot window, add this to `foot.ini`; without the program the shell
-simply starts plainly:
+To start it in every new foot window, add this to `foot.ini`, with your own shell in place of
+`/bin/zsh`; without the program the shell simply starts plainly (`./berkedark install terminal` in
+the folder above does it for you, with your shell):
 
     shell=/bin/sh -c '[ -x "$HOME/.local/bin/berkeDark" ] && exec "$HOME/.local/bin/berkeDark" /bin/zsh; exec /bin/zsh'
 

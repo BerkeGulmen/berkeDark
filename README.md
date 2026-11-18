@@ -39,7 +39,7 @@ supplies the remedy (its colour interpreter in the terminal, a theme file, a set
 
 ### One command
 
-On Linux, from this folder (needs Python 3.11 or later; the terminal part also needs clang):
+On Linux, from this folder (needs Python 3.11 or later; the terminal part also needs clang and runs on Linux only):
 
 ```sh
 ./berkedark install                 # everything: terminal (foot and the colour interpreter), claude, qwen, codex, grok, ohmyzsh
@@ -49,15 +49,34 @@ On Linux, from this folder (needs Python 3.11 or later; the terminal part also n
 ./berkedark uninstall               # put every file back as it was
 ```
 
-It keeps each file it touches as it was, once, in `~/.local/state/berkeDark`, and `uninstall` puts those
-back byte for byte. In a tool's settings file it changes only berkeDark's own keys (Claude Code's `theme` and
-`tui`, Qwen Code's `ui.theme`, Codex's `[tui] theme`, Grok's `[ui] theme` and `[features] terminal_theme`,
-oh-my-zsh's `ZSH_THEME`) and leaves every other line; a file it cannot edit safely (JSON with comments, a key
-written another way) it leaves alone and says what to set. It checks what it wrote (valid JSON and TOML, no
-empty colour in Qwen Code's theme, the theme inside your home folder where Qwen Code requires it, foot's
-`--check-config`). Running it again changes nothing. The patch for Qwen Code's ```diff blocks changes Qwen
-Code's own files, so it is never part of `install`: it is a step of its own, `./berkedark qwen-diff-patch`
-(see `cli/README.md`).
+It keeps each file it touches as it was, once, in `~/.local/state/berkeDark`, the first time it changes it.
+In a tool's settings file it changes only berkeDark's own keys (Claude Code's `theme` and `tui`, Qwen Code's
+`ui.theme`, Codex's `[tui] theme`, Grok's `[ui] theme` and `[features] terminal_theme`, oh-my-zsh's
+`ZSH_THEME`, the include line in foot's `foot.ini`) and leaves every other line, its line ends (CRLF stays
+CRLF) and its mode; JSON keeps the file's indentation, though an object written on one line inside a
+spread-out file comes out spread out. A file it cannot edit safely (JSON with comments, a key written another
+way, a file that is not UTF-8 or is read-only) it leaves alone and says what to set. A file reached through a
+symbolic link (stow, chezmoi) is written where the link points, and the link stays; a file with hard links is
+written in place. It checks what it wrote (valid JSON and TOML, no empty colour in Qwen Code's theme, the
+theme inside your home folder where Qwen Code requires it, foot's `--check-config`). Running it again changes
+nothing.
+
+`uninstall` takes berkeDark out again. A file berkeDark placed goes, and a file it replaced comes back. In a
+settings file only berkeDark's keys go back to what they were, so what you or the tool wrote there since
+(Codex's project trust, a sign-in, a model) stays; a key you changed yourself after the install stays as you
+set it. A settings file berkeDark made goes only when nothing else is left in it. When a file was untouched
+since the install, it comes back byte for byte. Before it changes a file that changed after the install, it
+saves the file beside it as `<file>.berkeDark-before-uninstall-<date>-<time>`. A file it cannot put back is
+named, the others are still done, and running `uninstall` again finishes the job.
+
+For foot, berkeDark's include (`~/.config/foot/berkeDark.ini`) carries only its colours, its cursor and the
+line that starts your shell inside the colour interpreter: the `shell=` of your `foot.ini`, else `$SHELL`,
+else `/bin/sh`, started plainly when the interpreter is missing. Your font, padding, scrollback and the rest
+stay yours. Run `install` again after you change `shell=` in `foot.ini`. A `foot.ini` that berkeDark has to
+create starts with an include of the system's (`/etc/xdg/foot/foot.ini`), so that it hides nothing.
+
+The patch for Qwen Code's ```diff blocks changes Qwen Code's own files, so it is never part of `install`: it
+is a step of its own, `./berkedark qwen-diff-patch` (see `cli/README.md`).
 
 ### Your own colours
 

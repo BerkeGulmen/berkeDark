@@ -2,7 +2,7 @@
 """berkeDark's installer: one command for every surface berkeDark covers.
 
     ./berkedark install [TARGET ...]     install the targets (all when none is named)
-    ./berkedark uninstall [TARGET ...]   put back every file as it was before berkeDark touched it
+    ./berkedark uninstall [TARGET ...]   take berkeDark out again: files it placed go, the keys it set go back
     ./berkedark status                   what berkeDark has installed, file by file
     ./berkedark settings                 create your settings file, with commented examples
     ./berkedark qwen-diff-patch [ARGS]   the separate, explicit patch for Qwen Code's diff blocks
@@ -17,11 +17,12 @@ the VS Code theme comes from the Marketplace).
 berkeDark is a thing that fixes every surface on its own: where a tool gives a theme no role, berkeDark
 supplies the remedy. This installer only places berkeDark's files and sets the few settings that switch them
 on. For every file it touches it keeps the file as it was (once, in ~/.local/state/berkeDark), changes in a
-settings file only the keys berkeDark owns, checks the result, and can put everything back.
+settings file only the keys berkeDark owns, checks the result, and can take everything out again: a settings
+file gets back only berkeDark's keys as they were, so what you or the tool changed there since stays.
 
 Your settings file, ~/.config/berkeDark/berkeDark.toml, may change colours of berkeDark's pool (the single
 source of all its colours); every install writes berkeDark's files from the pool with your changes first.
-Needs Python 3.11 or later; the terminal target needs clang.
+Needs Python 3.11 or later; the terminal target needs clang and runs on Linux.
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 try:
@@ -71,18 +73,119 @@ SETTINGS_TEMPLATE = '''# berkeDark: your own changes to berkeDark's colours.
 '''
 
 
+class Refusal(Exception):
+    """berkeDark will not change this file; the message says why and what to do instead."""
+
+
+# ---------------------------------------------------------------- files: reading, writing, links
+
+def sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def current_umask() -> int:
+    mask = os.umask(0)
+    os.umask(mask)
+    return mask
+
+
+def real_path(path: Path) -> Path:
+    """The file a path names. A symbolic link (stow, chezmoi and the like) is followed, so that berkeDark writes
+    the file the link points to and the link stays a link."""
+    if not path.is_symlink():
+        return path
+    real = Path(os.path.realpath(path))
+    if not real.exists():
+        raise Refusal(f"{path} is a link to {real}, which is missing; berkeDark changes nothing there")
+    return real
+
+
+def read_text(path: Path) -> str:
+    """The file as text, its line ends as they are (CRLF stays CRLF)."""
+    try:
+        return path.read_bytes().decode("utf-8")
+    except UnicodeDecodeError:
+        raise Refusal(f"{path} is not UTF-8 text; berkeDark changes nothing in it")
+
+
+def split_lines(text: str) -> tuple[list[str], str, bool]:
+    """The lines of a text, the line end it uses and whether it ends with one. Only \\n and \\r\\n end a line."""
+    if not text:
+        return [], "\n", True
+    nl = "\r\n" if "\r\n" in text else "\n"
+    lines = text.split("\n")
+    if nl == "\r\n":
+        lines = [line[:-1] if line.endswith("\r") else line for line in lines]
+    final = text.endswith("\n")
+    if final:
+        lines.pop()
+    return lines, nl, final
+
+
+def atomic_write(path: Path, data: bytes, mode: int):
+    handle, tmp = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
+    try:
+        with os.fdopen(handle, "wb") as out:
+            out.write(data)
+        os.chmod(tmp, mode)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
+def put(path: Path, data: bytes, executable: bool = False, mode: int | None = None):
+    """Writes data to path, a real file (not a link). A new file gets 0666 (0777 when executable) less the
+    umask; an existing one keeps its mode (with x bits added where it has r bits, when executable); mode, when
+    given, is used as it is. A file with other hard links is written in place, so that the links stay."""
+    if path.exists():
+        info = path.stat()
+        if mode is None:
+            mode = info.st_mode & 0o7777
+            if executable:
+                mode |= (mode & 0o444) >> 2
+        if info.st_nlink > 1:
+            with open(path, "r+b") as out:
+                out.write(data)
+                out.truncate()
+                out.flush()
+                os.fsync(out.fileno())
+            os.chmod(path, mode)
+            return
+    elif mode is None:
+        mode = (0o777 if executable else 0o666) & ~current_umask()
+    atomic_write(path, data, mode)
+
+
+def say(state: str, path: Path | str, note: str = ""):
+    print(f"  {state:<13} {path}{('  (' + note + ')') if note else ''}")
+
+
 # ---------------------------------------------------------------- the record of what berkeDark changed
 
 class Record:
-    """manifest.json: for each file berkeDark wrote, whether it existed, where its old bytes are kept, and the
-    hash of what berkeDark wrote; and the folders berkeDark created."""
+    """manifest.json: for each file berkeDark wrote, whether it existed, where its old bytes are kept, the hash
+    of what berkeDark wrote and of what was there just before; for a settings file, each key berkeDark set and
+    its value before; and the folders berkeDark created. It is saved after every change, before and after the
+    file is written, so that a crash part-way never leaves a kept copy or a changed file unlisted."""
 
     def __init__(self, dry: bool):
         self.dry = dry
         self.path = STATE / "manifest.json"
         self.data = {"files": {}, "dirs": {}, "state_dirs": []}
         if self.path.exists():
-            self.data = json.loads(self.path.read_text(encoding="utf-8"))
+            try:
+                self.data = json.loads(self.path.read_text(encoding="utf-8"))
+                if not isinstance(self.data, dict) or not isinstance(self.data.get("files"), dict):
+                    raise ValueError("it is not berkeDark's record")
+            except (OSError, ValueError) as error:
+                raise SystemExit(
+                    f"berkeDark: its record {self.path} cannot be read ({error}).\n"
+                    f"It lists the files berkeDark changed; the copies of your files as they were are in {STATE / 'backups'}.\n"
+                    f"Repair it, or move it aside (mv {self.path} {self.path}.broken) and berkeDark starts a new record,\n"
+                    "taking the files as it finds them; then put back by hand what you need from the copies.")
+            self.data.setdefault("dirs", {})
+            self.data.setdefault("state_dirs", [])
         else:  # the folders made for the record go again with the last uninstall
             p = STATE.parent
             while not p.exists():
@@ -90,7 +193,7 @@ class Record:
                 p = p.parent
 
     def save(self):
-        if self.dry:
+        if self.dry or (not self.path.exists() and not self.data["files"] and not self.data["dirs"]):
             return
         STATE.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".tmp")
@@ -109,54 +212,68 @@ class Record:
             d.mkdir()
             self.data["dirs"].setdefault(str(d), target)
 
-    def write(self, target: str, path: Path, data: bytes, mode: int | None = None, what: str = "") -> str:
-        """Writes data to path, keeping the old file the first time. Returns created, changed or unchanged."""
+    def keep(self, key: str, real: Path) -> str:
+        """Copies the file as it is into the backups folder, under a name no other copy has."""
+        backups = STATE / "backups"
+        backups.mkdir(parents=True, exist_ok=True)
+        base = sha(key.encode())[:16] + "-" + Path(key).name
+        listed = {entry.get("backup") for entry in self.data["files"].values()}
+        name, n = base, 1
+        while name in listed or (backups / name).exists():
+            n += 1
+            name = f"{base}.{n}"
+        shutil.copy2(real, backups / name)
+        return name
+
+    def write(self, target: str, path: Path, data: bytes, executable: bool = False,
+              edit: tuple[str, dict] | None = None) -> str:
+        """Writes data to path, keeping the old file the first time it is changed. edit, for a settings file in
+        which berkeDark sets only some keys: (format, {key: what it was before}), kept the first time each key
+        is set, so that uninstall can put back just those keys. Returns created, changed or unchanged."""
         key = str(path)
-        old = path.read_bytes() if path.exists() else None
-        if old == data and key in self.data["files"]:
-            return "unchanged"
+        real = real_path(path)
+        old = real.read_bytes() if real.exists() else None
+        entry = self.data["files"].get(key)
         if old == data:
-            # Already as wanted, though not by berkeDark's hand: recorded so that uninstall leaves it as found.
-            entry = {"target": target, "existed": True, "backup": None, "written": sha(data)}
-            if not self.dry:
-                self.data["files"][key] = entry
+            if self.dry:
+                return "unchanged"
+            if entry is None:
+                # Already as wanted, though not by berkeDark's hand: recorded so that uninstall leaves it as found.
+                entry = self.data["files"][key] = {"target": target, "existed": True, "backup": None,
+                                                   "written": sha(data)}
+                if edit:
+                    entry["format"], entry["keys"] = edit[0], dict(edit[1])
+            else:
+                if edit and "keys" in entry:
+                    for name, before in edit[1].items():
+                        entry["keys"].setdefault(name, before)
+                if entry.get("written") != sha(data):  # as berkeDark wants it, though not as berkeDark last wrote it
+                    entry["written"] = sha(data)
+                    entry.pop("from", None)
+            self.save()
             return "unchanged"
-        if key not in self.data["files"]:
-            entry = {"target": target, "existed": old is not None, "backup": None}
-            if old is not None and not self.dry:
-                backups = STATE / "backups"
-                backups.mkdir(parents=True, exist_ok=True)
-                name = hashlib.sha256(key.encode()).hexdigest()[:16] + "-" + path.name
-                shutil.copy2(path, backups / name)
-                entry["backup"] = name
-            if not self.dry:
-                self.data["files"][key] = entry
+        if old is not None and not os.access(real, os.W_OK):
+            raise Refusal(f"{path} is read-only; berkeDark changes nothing in it (make it writable to let it)")
         if self.dry:
             return "would change" if old is not None else "would create"
-        self.ensure_dir(target, path.parent)
-        atomic_write(path, data, mode if mode is not None else (path.stat().st_mode & 0o7777 if old is not None else 0o644))
-        self.data["files"][key]["written"] = sha(data)
+        if entry is None:
+            entry = self.data["files"][key] = {"target": target, "existed": old is not None, "backup": None}
+            if edit:
+                entry["format"], entry["keys"] = edit[0], {}
+        if old is not None and entry["existed"] and not entry.get("backup"):
+            entry["backup"] = self.keep(key, real)  # the first time berkeDark actually changes this file
+        if edit and "keys" in entry:
+            for name, before in edit[1].items():
+                entry["keys"].setdefault(name, before)
+        if real != path:
+            entry["real"] = str(real)
+        self.ensure_dir(target, real.parent)
+        self.save()  # the record names the kept copy before the file changes
+        put(real, data, executable=executable)
+        entry["written"] = sha(data)
+        entry["from"] = sha(old) if old is not None else None
+        self.save()
         return "changed" if old is not None else "created"
-
-
-def sha(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def atomic_write(path: Path, data: bytes, mode: int):
-    handle, tmp = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
-    try:
-        with os.fdopen(handle, "wb") as out:
-            out.write(data)
-        os.chmod(tmp, mode)
-        os.replace(tmp, path)
-    finally:
-        if os.path.exists(tmp):
-            os.remove(tmp)
-
-
-def say(state: str, path: Path | str, note: str = ""):
-    print(f"  {state:<13} {path}{('  (' + note + ')') if note else ''}")
 
 
 # ---------------------------------------------------------------- the pool, with the user's changes
@@ -224,35 +341,106 @@ def apply_settings(pool_file: Path):
 
 
 # ---------------------------------------------------------------- settings files: only berkeDark's keys
+#
+# Each format has a merge (set berkeDark's keys; returns the new text and, per key, what it was before) and an
+# unmerge (put back those keys in the file as it is now; returns the new text, or None when berkeDark made the
+# file and nothing else is left in it, and notes). Both check their result by parsing it.
 
-def merge_json(path: Path, keys: dict[tuple[str, ...], object]) -> bytes:
-    """The settings file with only the given keys set; everything else as it was. Refuses a file that is not a
+def json_layout(text: str | None) -> tuple:
+    """The indentation (None: all on one line), line end and final line end a JSON file uses."""
+    if text is None:
+        return 2, "\n", True
+    lines, nl, final = split_lines(text.strip())
+    if len(lines) <= 1:
+        return None, nl, text.endswith("\n")
+    for line in lines[1:]:
+        found = re.match(r"^([ \t]+)\S", line)
+        if found:
+            return found.group(1), nl, text.endswith("\n")
+    return 2, nl, text.endswith("\n")
+
+
+def dump_json(data, layout) -> str:
+    indent, nl, final = layout
+    text = json.dumps(data, indent=indent, ensure_ascii=False)  # a newline inside a string is written as \n
+    return text.replace("\n", nl) + (nl if final else "")
+
+
+def load_json(path: Path, text: str, keys) -> dict:
+    try:
+        data = json.loads(text)
+    except ValueError:
+        raise Refusal(f"{path} is not plain JSON (comments?); set {fmt_keys(keys)} yourself")
+    if not isinstance(data, dict):
+        raise Refusal(f"{path} is not a JSON object; set {fmt_keys(keys)} yourself")
+    return data
+
+
+def merge_json(path: Path, keys: dict[tuple[str, ...], object]) -> tuple[bytes, dict]:
+    """The settings file with only the given keys set; everything else as it was, in the file's own indentation
+    (an object written on one line inside a spread-out file comes out spread out). Refuses a file that is not a
     JSON object (a file with comments, too: rewriting it would lose them)."""
-    if path.exists():
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except ValueError:
-            raise Refusal(f"{path} is not plain JSON (comments?); set {fmt_keys(keys)} yourself")
-        if not isinstance(data, dict):
-            raise Refusal(f"{path} is not a JSON object")
-    else:
-        data = {}
+    text = read_text(path) if path.exists() else None
+    data = load_json(path, text, keys) if text is not None else {}
     before = json.loads(json.dumps(data))
+    records = {}
     for key, value in keys.items():
-        node = data
-        for part in key[:-1]:
-            if not isinstance(node.get(part, {}), dict):
-                raise Refusal(f"{path}: {'.'.join(key[:-1])} is not an object")
-            node = node.setdefault(part, {})
+        node, created = data, []
+        for i, part in enumerate(key[:-1]):
+            if part not in node:
+                created.append(list(key[:i + 1]))
+                node[part] = {}
+            elif not isinstance(node[part], dict):
+                raise Refusal(f"{path}: {'.'.join(key[:i + 1])} is not an object; set {fmt_keys(keys)} yourself")
+            node = node[part]
+        records[".".join(key)] = {"path": list(key), "value": value, "had": key[-1] in node,
+                                  "old": node.get(key[-1]), "parents": created}
         node[key[-1]] = value
-    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
-    check = json.loads(text)
+    out = dump_json(data, json_layout(text))
+    check = json.loads(out)
     for key in keys:  # everything else unchanged
         drop(check, key)
         drop(before, key)
     if strip_empty(check) != strip_empty(before):
         raise Refusal(f"{path}: merging would change more than berkeDark's keys")
-    return text.encode()
+    return out.encode(), records
+
+
+def unmerge_json(path: Path, text: str, records: dict, created: bool) -> tuple[str | None, list[str]]:
+    data = load_json(path, text, {})
+    before = json.loads(json.dumps(data))
+    notes, undone = [], []
+    for name, rec in records.items():
+        node = data
+        for part in rec["path"][:-1]:
+            node = node.get(part) if isinstance(node, dict) else None
+        last = rec["path"][-1]
+        if not isinstance(node, dict) or last not in node:
+            notes.append(f"{name} is gone already")
+            continue
+        if node[last] != rec["value"]:
+            notes.append(f"{name} was changed since; left as it is")
+            continue
+        if rec["had"]:
+            node[last] = rec["old"]
+        else:
+            del node[last]
+        undone.append(rec)
+        for parent in reversed(rec.get("parents", [])):  # the objects berkeDark made for the key, when empty
+            holder = data
+            for part in parent[:-1]:
+                holder = holder.get(part, {})
+            if isinstance(holder, dict) and holder.get(parent[-1]) == {}:
+                del holder[parent[-1]]
+    check = json.loads(json.dumps(data))
+    for rec in undone:
+        drop(check, tuple(rec["path"]))
+        drop(before, tuple(rec["path"]))
+    if strip_empty(check) != strip_empty(before):
+        raise Refusal(f"{path}: putting back berkeDark's keys would change more than those keys")
+    if created and not data:
+        return None, notes
+    return dump_json(data, json_layout(text)), notes
 
 
 def drop(node: dict, key: tuple[str, ...]):
@@ -279,43 +467,65 @@ def toml_value(value) -> str:
     return json.dumps(value)
 
 
-def merge_toml(path: Path, keys: dict[tuple[str, str], object]) -> bytes:
-    """The TOML file with only [section] key = value set for the given keys, edited line by line so that
-    comments and order stay; checked by parsing before and after."""
+def toml_section(lines: list[str], section: str) -> tuple[int, int] | None:
+    """Where [section] starts and where the next table starts, or None."""
+    header = re.compile(r"^\s*\[\s*" + re.escape(section) + r"\s*\]\s*(#.*)?$")
+    starts = [i for i, line in enumerate(lines) if header.match(line)]
+    if not starts:
+        return None
+    start = starts[0]
+    end = next((i for i in range(start + 1, len(lines)) if re.match(r"^\s*\[", lines[i])), len(lines))
+    return start, end
+
+
+def toml_key_line(lines: list[str], start: int, end: int, key: str) -> int | None:
+    key_line = re.compile(r"^\s*" + re.escape(key) + r"\s*=")
+    return next((i for i in range(start + 1, end) if key_line.match(lines[i])), None)
+
+
+def load_toml(path: Path, text: str, keys) -> dict:
     if tomllib is None:
         raise Refusal(f"editing {path} needs Python 3.11 or later; set {fmt_keys(keys)} yourself")
-    text = path.read_text(encoding="utf-8") if path.exists() else ""
     try:
-        before = tomllib.loads(text)
+        return tomllib.loads(text)
     except tomllib.TOMLDecodeError as error:
         raise Refusal(f"{path} is not valid TOML ({error}); set {fmt_keys(keys)} yourself")
-    lines = text.splitlines()
+
+
+def merge_toml(path: Path, keys: dict[tuple[str, str], object]) -> tuple[bytes, dict]:
+    """The TOML file with only [section] key = value set for the given keys, edited line by line so that
+    comments, order and line ends stay; checked by parsing before and after."""
+    text = read_text(path) if path.exists() else ""
+    before = load_toml(path, text, keys)
+    lines, nl, _ = split_lines(text)
+    records = {}
     for (section, key), value in keys.items():
         current = before.get(section)
         if current is not None and not isinstance(current, dict):
-            raise Refusal(f"{path}: {section} is not a table")
-        header = re.compile(r"^\s*\[\s*" + re.escape(section) + r"\s*\]\s*(#.*)?$")
-        starts = [i for i, line in enumerate(lines) if header.match(line)]
+            raise Refusal(f"{path}: {section} is not a table; set {section}.{key} yourself")
         line_text = f"{key} = {toml_value(value)}"
-        if not starts:
+        found = toml_section(lines, section)
+        if found is None:
             if current is not None:  # the table is written another way (dotted keys, inline): not ours to rewrite
                 raise Refusal(f"{path}: {section} is not written as a [{section}] table; set {section}.{key} yourself")
             if lines and lines[-1].strip():
                 lines.append("")
             lines += [f"[{section}]", line_text]
+            records[f"{section}.{key}"] = {"section": section, "key": key, "value": value, "had": False,
+                                           "line": None, "new_section": True}
             continue
-        start = starts[0]
-        end = next((i for i in range(start + 1, len(lines)) if re.match(r"^\s*\[", lines[i])), len(lines))
-        key_line = re.compile(r"^\s*" + re.escape(key) + r"\s*=")
-        found = [i for i in range(start + 1, end) if key_line.match(lines[i])]
-        if found:
-            lines[found[0]] = line_text
+        start, end = found
+        at = toml_key_line(lines, start, end, key)
+        records[f"{section}.{key}"] = {"section": section, "key": key, "value": value, "had": at is not None,
+                                       "line": lines[at] if at is not None else None, "new_section": False}
+        if at is not None:
+            lines[at] = line_text
         else:
             at = end
             while at > start + 1 and not lines[at - 1].strip():
                 at -= 1
             lines.insert(at, line_text)
-    out = "\n".join(lines) + "\n"
+    out = nl.join(lines) + nl
     try:
         after = tomllib.loads(out)
     except tomllib.TOMLDecodeError as error:
@@ -328,58 +538,196 @@ def merge_toml(path: Path, keys: dict[tuple[str, str], object]) -> bytes:
             before[section].pop(key, None)
     if strip_empty(after) != strip_empty(before):
         raise Refusal(f"{path}: editing would change more than berkeDark's keys; nothing changed")
-    return out.encode()
+    return out.encode(), records
 
 
-class Refusal(Exception):
-    pass
+def unmerge_toml(path: Path, text: str, records: dict, created: bool) -> tuple[str | None, list[str]]:
+    before = load_toml(path, text, {})
+    lines, nl, final = split_lines(text)
+    notes, undone = [], []
+    for name, rec in records.items():
+        found = toml_section(lines, rec["section"])
+        at = toml_key_line(lines, *found, rec["key"]) if found else None
+        if at is None:
+            notes.append(f"{name} is gone already")
+            continue
+        try:
+            value = tomllib.loads(lines[at]).get(rec["key"])
+        except tomllib.TOMLDecodeError:
+            value = None
+        if value != rec["value"]:
+            notes.append(f"{name} was changed since; left as it is")
+            continue
+        undone.append(rec)
+        if rec["had"]:
+            lines[at] = rec["line"]
+            continue
+        del lines[at]
+        start, end = toml_section(lines, rec["section"])
+        if rec["new_section"] and not any(line.strip() for line in lines[start + 1:end]):
+            del lines[start:end]  # the table berkeDark made, now empty
+            if start == len(lines) and start > 0 and not lines[start - 1].strip():
+                del lines[start - 1]  # and the empty line berkeDark put before it
+    out = nl.join(lines) + (nl if lines and final else "")
+    try:
+        after = tomllib.loads(out)
+    except tomllib.TOMLDecodeError as error:
+        raise Refusal(f"{path}: putting back berkeDark's keys would leave invalid TOML ({error}); nothing changed")
+    for rec in undone:
+        section, key = rec["section"], rec["key"]
+        try:
+            wanted = tomllib.loads(rec["line"]).get(key) if rec["had"] else None
+        except tomllib.TOMLDecodeError as error:
+            raise Refusal(f"{path}: the old line of {section}.{key} does not read alone ({error}); nothing changed")
+        if after.get(section, {}).get(key) != wanted:
+            raise Refusal(f"{path}: {section}.{key} did not go back; nothing changed")
+        after.get(section, {}).pop(key, None)
+        before.get(section, {}).pop(key, None)
+    if strip_empty(after) != strip_empty(before):
+        raise Refusal(f"{path}: putting back berkeDark's keys would change more than those keys; nothing changed")
+    if created and not any(line.strip() for line in lines):
+        return None, notes
+    return out, notes
+
+
+def unmerge_line(path: Path, text: str, records: dict, created: bool) -> tuple[str | None, list[str]]:
+    """A line berkeDark replaced (ZSH_THEME in .zshrc): the old line back, when berkeDark's is still there."""
+    lines, nl, final = split_lines(text)
+    notes = []
+    for name, rec in records.items():
+        found = [i for i, line in enumerate(lines) if re.match(r"^\s*" + re.escape(name) + "=", line)]
+        if not found:
+            notes.append(f"{name} is gone already")
+        elif lines[found[0]] != rec["value"]:
+            notes.append(f"{name} was changed since; left as it is")
+        else:
+            lines[found[0]] = rec["line"]
+    return nl.join(lines) + (nl if lines and final else ""), notes
+
+
+def unmerge_block(path: Path, text: str, records: dict, created: bool) -> tuple[str | None, list[str]]:
+    """Lines berkeDark added (the include in foot.ini): taken out again."""
+    lines, nl, final = split_lines(text)
+    notes = []
+    for name, rec in records.items():
+        added, n = rec["added"], len(rec["added"])
+        at = next((i for i in range(len(lines) - n + 1) if n and lines[i:i + n] == added), None)
+        if at is not None:
+            del lines[at:at + n]
+        elif rec["added"] and rec["line"] in lines:
+            lines.remove(rec["line"])
+        elif rec["added"]:
+            notes.append(f"the {name} line is gone already")
+    if created and not any(line.strip() for line in lines):
+        return None, notes
+    return nl.join(lines) + (nl if lines and final else ""), notes
+
+
+UNMERGE = {"json": unmerge_json, "toml": unmerge_toml, "line": unmerge_line, "block": unmerge_block}
 
 
 # ---------------------------------------------------------------- the targets
 
-def install_terminal(tree: Path, record: Record):
+def foot_shell(text: str) -> str | None:
+    """The last shell= of the [main] section of a foot.ini, or None."""
+    section, value = "main", None
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        header = re.match(r"^\[\s*([^\]]+?)\s*\]", line)
+        if header:
+            section = header.group(1)
+            continue
+        name, equals, rest = line.partition("=")
+        if section == "main" and equals and name.strip() == "shell":
+            value = re.sub(r"\s+#.*$", "", rest).strip()
+    return value
+
+
+def login_shell() -> str:
+    """$SHELL, else the account's shell, else /bin/sh. foot sets SHELL to the first word of its own shell= line,
+    which for berkeDark's line is /bin/sh, so /bin/sh in $SHELL asks the account first."""
+    shell = os.environ.get("SHELL") or ""
+    if shell and shell != "/bin/sh":
+        return shell
+    try:
+        import pwd
+        return pwd.getpwuid(os.getuid()).pw_shell or shell or "/bin/sh"
+    except (ImportError, KeyError):
+        return shell or "/bin/sh"
+
+
+def system_foot_ini() -> Path | None:
+    """The foot.ini foot reads when the user has none (it would read no other once the user has one)."""
+    for folder in (os.environ.get("XDG_CONFIG_DIRS") or "/etc/xdg").split(":"):
+        if folder and (Path(folder) / "foot/foot.ini").is_file():
+            return Path(folder) / "foot/foot.ini"
+    return None
+
+
+def install_terminal(tree: Path, record: Record) -> int:
     print("terminal: berkeDark's colour interpreter and foot's palette")
+    failed = 0
     cc = os.environ.get("CC", "clang")
     if shutil.which(cc) is None:
         say("NOT DONE", "~/.local/bin/berkeDark", f"{cc} was not found; install clang or set CC")
+        failed += 1
     else:
         done = subprocess.run(["sh", str(tree / "terminal/build.sh")], capture_output=True, text=True)
         if done.returncode != 0:
             say("NOT DONE", "~/.local/bin/berkeDark", "the build failed: " + (done.stderr or done.stdout).strip()[:200])
+            failed += 1
         else:
             path = HOME / ".local/bin/berkeDark"
-            say(record.write("terminal", path, (tree / "terminal/build/berkeDark").read_bytes(), 0o755), path)
+            say(record.write("terminal", path, (tree / "terminal/build/berkeDark").read_bytes(), executable=True), path)
     if shutil.which("foot") is None and not (CONFIG / "foot").exists():
         say("skipped", CONFIG / "foot", "foot is not installed; run programs as: berkeDark PROGRAM")
-        return
+        return failed
     foot_dir = CONFIG / "foot"
-    login_shell = os.environ.get("SHELL", "/bin/sh")
-    try:
-        import pwd
-        login_shell = pwd.getpwuid(os.getuid()).pw_shell or login_shell
-    except (ImportError, KeyError):
-        pass
-    ini = (tree / "terminal/config/foot.ini").read_text(encoding="utf-8")
-    ini = "\n".join(line.replace("/bin/zsh", login_shell) if line.startswith("shell=") else line for line in ini.splitlines()) + "\n"
-    own = foot_dir / "berkeDark.ini"
-    say(record.write("terminal", own, ini.encode()), own)
     main = foot_dir / "foot.ini"
+    own = foot_dir / "berkeDark.ini"
     include = f"include={own}"
-    text = main.read_text(encoding="utf-8") if main.exists() else ""
-    if include in text.splitlines():
-        record.write("terminal", main, text.encode())
-        say("unchanged", main)
-        return
-    new = text + ("" if not text or text.endswith("\n") else "\n") + f"\n[main]\n{include}\n"
+    real_main = real_path(main)
+    text = read_text(real_main) if real_main.exists() else None
+
+    # berkeDark's file: its colours and cursor, and the user's own shell inside the colour interpreter.
+    ini, note = [], None
+    for line in read_text(tree / "terminal/config/foot.ini").splitlines():
+        if line.startswith("shell="):
+            theirs = foot_shell(text or "")
+            if theirs and "berkeDark" in theirs:  # their shell= already starts the interpreter: kept as it is
+                line = "shell=" + theirs
+            elif "'" in (theirs or login_shell()):
+                note = "foot.ini's shell= has quotes, so berkeDark leaves the shell alone; run programs as: berkeDark PROGRAM"
+                continue
+            else:
+                line = line.replace("@SHELL@", theirs or login_shell())
+        ini.append(line)
+    ini = "\n".join(ini) + "\n"
+
+    if text is not None and include in split_lines(text)[0]:
+        new, added = text, []
+    elif text is None:  # a new foot.ini would hide the system's one: it comes in first
+        system = system_foot_ini()
+        added = ([f"include={system}", ""] if system else []) + ["[main]", include]
+        new = "\n".join(added) + "\n"
+    else:
+        nl = split_lines(text)[1]
+        added = ["", "[main]", include]
+        new = text + ("" if not text or text.endswith("\n") else nl) + nl.join(added) + nl
     if shutil.which("foot") and not record.dry:
-        with tempfile.NamedTemporaryFile("w", suffix=".ini", dir=foot_dir, delete=False) as probe:
-            probe.write(new)
-        ok = subprocess.run(["foot", "-c", probe.name, "--check-config"], capture_output=True).returncode == 0
-        os.remove(probe.name)
-        if not ok:
-            say("NOT CHANGED", main, "foot does not accept the result; nothing changed")
-            return
-    say(record.write("terminal", main, new.encode()), main, "one include line")
+        with tempfile.TemporaryDirectory(dir=tree.parent) as probe:
+            Path(probe, "berkeDark.ini").write_text(ini, encoding="utf-8")
+            Path(probe, "foot.ini").write_text(new.replace(include, f"include={probe}/berkeDark.ini"), encoding="utf-8")
+            done = subprocess.run(["foot", "-c", f"{probe}/foot.ini", "--check-config"], capture_output=True, text=True)
+        if done.returncode != 0:
+            say("NOT CHANGED", main, "foot does not accept the result; nothing changed: " + (done.stderr or done.stdout).strip()[:200])
+            return failed + 1
+    say(record.write("terminal", own, ini.encode()), own, note or "")
+    say(record.write("terminal", main, new.encode(), edit=("block", {"include": {"added": added, "line": include}})),
+        main, "one include line")
+    return failed
 
 
 def check_qwen_theme(data: bytes):
@@ -406,7 +754,8 @@ def install_claude(tree: Path, record: Record):
     say(record.write("claude", theme, (tree / "terminal/config/claude-theme.json").read_bytes()), theme)
     settings = folder / "settings.json"
     keys = {("theme",): "custom:berkedark", ("tui",): "fullscreen"}
-    say(record.write("claude", settings, merge_json(settings, keys)), settings, fmt_keys(keys))
+    data, records = merge_json(settings, keys)
+    say(record.write("claude", settings, data, edit=("json", records)), settings, fmt_keys(keys))
 
 
 def install_qwen(tree: Path, record: Record):
@@ -420,7 +769,8 @@ def install_qwen(tree: Path, record: Record):
     say(record.write("qwen", theme, data), theme)
     settings = folder / "settings.json"
     keys = {("ui", "theme"): str(theme)}
-    say(record.write("qwen", settings, merge_json(settings, keys)), settings, fmt_keys(keys))
+    data, records = merge_json(settings, keys)
+    say(record.write("qwen", settings, data, edit=("json", records)), settings, fmt_keys(keys))
     print("  note          ```diff blocks need a separate, explicit step: ./berkedark qwen-diff-patch --dry-run")
 
 
@@ -430,15 +780,15 @@ def install_codex(tree: Path, record: Record):
     theme = folder / "themes/berkedark.tmTheme"
     say(record.write("codex", theme, (tree / "cli/codex/berkedark.tmTheme").read_bytes()), theme)
     config = folder / "config.toml"
-    keys = {("tui", "theme"): "berkedark"}
-    say(record.write("codex", config, merge_toml(config, keys)), config, "[tui] theme")
+    data, records = merge_toml(config, {("tui", "theme"): "berkedark"})
+    say(record.write("codex", config, data, edit=("toml", records)), config, "[tui] theme")
 
 
 def install_grok(tree: Path, record: Record):
     print("grok: Grok's settings (it takes the terminal's sixteen colours)")
     config = HOME / ".grok/config.toml"
-    keys = {("ui", "theme"): "terminal", ("features", "terminal_theme"): True}
-    say(record.write("grok", config, merge_toml(config, keys)), config, "[ui] theme, [features] terminal_theme")
+    data, records = merge_toml(config, {("ui", "theme"): "terminal", ("features", "terminal_theme"): True})
+    say(record.write("grok", config, data, edit=("toml", records)), config, "[ui] theme, [features] terminal_theme")
 
 
 def install_ohmyzsh(tree: Path, record: Record):
@@ -447,19 +797,22 @@ def install_ohmyzsh(tree: Path, record: Record):
     if not zsh.is_dir():
         say("skipped", zsh, "oh-my-zsh is not installed")
         return
+    zshrc = Path(os.environ.get("ZDOTDIR") or HOME) / ".zshrc"
+    real = real_path(zshrc)
+    text = read_text(real) if real.exists() else ""  # read first: a file berkeDark cannot read stops it here
     custom = Path(os.environ.get("ZSH_CUSTOM") or zsh / "custom")
     theme = custom / "themes/berkeDark.zsh-theme"
     say(record.write("ohmyzsh", theme, (tree / "terminal/oh-my-zsh/berkeDark.zsh-theme").read_bytes()), theme)
-    zshrc = Path(os.environ.get("ZDOTDIR") or HOME) / ".zshrc"
-    text = zshrc.read_text(encoding="utf-8") if zshrc.exists() else ""
-    lines = text.splitlines()
+    lines, nl, final = split_lines(text)
     found = [i for i, line in enumerate(lines) if re.match(r"^\s*ZSH_THEME=", line)]
     if not found:
         say("NOT CHANGED", zshrc, 'no ZSH_THEME line; add ZSH_THEME="berkeDark" before oh-my-zsh is sourced')
         return
-    lines[found[0]] = 'ZSH_THEME="berkeDark"'
-    new = "\n".join(lines) + ("\n" if text.endswith("\n") or not text else "")
-    say(record.write("ohmyzsh", zshrc, new.encode()), zshrc, "the ZSH_THEME line")
+    old_line, new_line = lines[found[0]], 'ZSH_THEME="berkeDark"'
+    lines[found[0]] = new_line
+    new = nl.join(lines) + (nl if final else "")
+    say(record.write("ohmyzsh", zshrc, new.encode(),
+                     edit=("line", {"ZSH_THEME": {"line": old_line, "value": new_line}})), zshrc, "the ZSH_THEME line")
 
 
 def install_vscode(tree: Path, record: Record):
@@ -481,44 +834,107 @@ def cmd_install(targets: list[str], dry: bool) -> int:
         tree = build_tree(Path(work))
         for target in targets:
             try:
-                INSTALLERS[target](tree, record)
+                failed += bool(INSTALLERS[target](tree, record))
             except Refusal as why:
                 say("NOT CHANGED", "", str(why))
                 failed += 1
-            record.save()
+            except (OSError, UnicodeDecodeError) as why:
+                say("NOT DONE", "", f"{target}: {why}")
+                failed += 1
+            finally:
+                record.save()
     print("Dry run: nothing was changed." if dry else
           "Done. Open a new terminal window; windows and programs already open keep what they had.")
+    if failed:
+        print(f"{failed} of the targets were not done completely; the lines above in capitals say why.")
     return 1 if failed else 0
+
+
+def before_uninstall_name(path: Path) -> Path:
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    saved, n = path.with_name(f"{path.name}.berkeDark-before-uninstall-{stamp}"), 1
+    while saved.exists() or saved.is_symlink():
+        n += 1
+        saved = path.with_name(f"{path.name}.berkeDark-before-uninstall-{stamp}-{n}")
+    return saved
+
+
+def undo_file(record: Record, key: str, dry: bool) -> bool:
+    """Takes berkeDark out of one file. Returns whether the record's copy of the file can go."""
+    entry, path = record.data["files"][key], Path(key)
+    real = real_path(path)
+    current = real.read_bytes() if real.exists() else None
+    backup = STATE / "backups" / entry["backup"] if entry.get("backup") else None
+    old = backup.read_bytes() if backup else None
+    changed = current is not None and entry.get("written") and sha(current) != entry["written"]
+    if current is None:
+        if old is not None and real.parent.is_dir():
+            if not dry:
+                put(real, old, mode=backup.stat().st_mode & 0o7777)
+            say("would restore" if dry else "restored", path, "it was missing")
+        elif old is not None:
+            say("kept", backup, f"{path} and its folder are gone, so it is not put back; this is the file as it was")
+            return False
+        else:
+            say("gone", path, "nothing to do")
+        return True
+    if entry["existed"] and not old:
+        say("left", path, "it was already like this before berkeDark")
+        return True
+    if current is not None and not os.access(real, os.W_OK):
+        raise Refusal("it is read-only; make it writable and run uninstall again")
+    # A settings file: berkeDark's keys go back one by one, unless the file is still exactly what berkeDark's
+    # one change made of the copy (then the copy comes back byte for byte).
+    exact = not changed and entry.get("from", "?") == (sha(old) if old is not None else None)
+    if changed:
+        saved = before_uninstall_name(path)
+        if not dry:
+            shutil.copy2(real, saved)
+        say("would save" if dry else "saved", saved, "this file changed after berkeDark wrote it")
+    if "keys" in entry and not exact:
+        new, notes = UNMERGE[entry["format"]](path, current.decode("utf-8"), entry["keys"], not entry["existed"])
+        if new is None:
+            if not dry:
+                path.unlink()
+            say("would remove" if dry else "removed", path, "berkeDark made it and nothing else is in it")
+        elif new.encode() == current:
+            say("left", path, "; ".join(notes) or "nothing of berkeDark's in it")
+        else:
+            if not dry:
+                put(real, new.encode())
+            say("would undo" if dry else "undone", path, "berkeDark's keys as they were; the rest as it is now" +
+                ("; " + "; ".join(notes) if notes else ""))
+    elif old is not None:
+        if not dry:
+            put(real, old, mode=backup.stat().st_mode & 0o7777)
+            os.utime(real, ns=(backup.stat().st_atime_ns, backup.stat().st_mtime_ns))
+        say("would restore" if dry else "restored", path)
+    else:
+        if not dry:
+            path.unlink()
+        say("would remove" if dry else "removed", path)
+    return True
 
 
 def cmd_uninstall(targets: list[str], dry: bool) -> int:
     record = Record(dry)
     files = record.data["files"]
-    count = 0
+    count = failed = 0
     for key in sorted(k for k, v in files.items() if v["target"] in targets):
-        entry, path = files[key], Path(key)
-        current = path.read_bytes() if path.exists() else None
-        if current is not None and entry.get("written") and sha(current) != entry["written"]:
-            saved = path.with_name(path.name + ".berkeDark-before-uninstall")
-            if not dry:
-                shutil.copy2(path, saved)
-            say("saved", saved, "you changed this file after berkeDark wrote it")
-        if entry["existed"] and entry["backup"]:
-            backup = STATE / "backups" / entry["backup"]
-            if not dry:
-                atomic_write(path, backup.read_bytes(), backup.stat().st_mode & 0o7777)
-                os.utime(path, ns=(backup.stat().st_atime_ns, backup.stat().st_mtime_ns))
-                backup.unlink()
-            say("would restore" if dry else "restored", path)
-        elif entry["existed"]:
-            say("left", path, "it was already like this before berkeDark")
-        else:
-            if not dry and path.exists():
-                path.unlink()
-            say("would remove" if dry else "removed", path)
-        if not dry:
-            del files[key]
+        try:
+            drop_copy = undo_file(record, key, dry)
+        except (Refusal, OSError, UnicodeDecodeError) as why:
+            say("NOT RESTORED", key, str(why))
+            failed += 1
+            continue
         count += 1
+        if dry:
+            continue
+        backup = files[key].get("backup")
+        del files[key]
+        record.save()  # the record no longer names the copy; only now may it go
+        if backup and drop_copy:
+            (STATE / "backups" / backup).unlink(missing_ok=True)
     for folder in sorted((d for d, t in record.data["dirs"].items() if t in targets), key=len, reverse=True):
         p = Path(folder)
         if p.is_dir() and not any(p.iterdir()):
@@ -529,13 +945,23 @@ def cmd_uninstall(targets: list[str], dry: bool) -> int:
             del record.data["dirs"][folder]
     record.save()
     if not dry and not files and not record.data["dirs"]:
-        shutil.rmtree(STATE, ignore_errors=True)
-        for folder in record.data.get("state_dirs", []):
-            p = Path(folder)
+        record.path.unlink(missing_ok=True)
+        for p in (STATE / "backups", STATE):  # only what is empty: a copy the record does not name stays
             if p.is_dir() and not any(p.iterdir()):
                 p.rmdir()
-    print(f"{count} files put back as they were." if not dry else "Dry run: nothing was changed.")
-    return 0
+        if STATE.exists():
+            say("kept", STATE, "it holds copies berkeDark no longer lists; look at them, then remove the folder")
+        else:
+            for folder in record.data.get("state_dirs", []):
+                p = Path(folder)
+                if p.is_dir() and not any(p.iterdir()):
+                    p.rmdir()
+    if dry:
+        print("Dry run: nothing was changed.")
+    else:
+        print(f"{count} files done." + (f" {failed} could not be put back; see NOT RESTORED above, then run uninstall"
+                                         " again." if failed else ""))
+    return 1 if failed else 0
 
 
 def cmd_status() -> int:

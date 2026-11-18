@@ -13,7 +13,11 @@ All notable changes to the "berkeDark" extension will be documented in this file
 
 ### Added
 - `berkedark`: one command that installs, checks and uninstalls berkeDark for every surface (foot and the colour interpreter, Claude Code, Qwen Code, Codex, Grok, oh-my-zsh), keeps every file it touches, changes only berkeDark's own keys in settings files, and writes the files from the pool with the user's changes in `~/.config/berkeDark/berkeDark.toml`; tested by `tests/installer.sh`
-- `cli/qwen/reapply-diff-color-patch.py`: makes Qwen Code's ```diff blocks readable with a custom theme (to be run again after each Qwen Code update)
+  - uninstall gives back only berkeDark's keys in a settings file, so what the tools wrote since (Codex's project trust, a sign-in, a model) stays; a file untouched since comes back byte for byte; a file changed since is first saved beside it with the date and time in its name
+  - a file it cannot put back (its folder removed, read-only) is named and the others are still done; the record is saved after every file, and a kept copy goes only once the record no longer names it
+  - files reached through symbolic links stay links, hard-linked files stay linked; CRLF line ends, the file's mode and JSON indentation are kept; new files follow the umask; read-only and non-UTF-8 files are refused with a message; a damaged record gives a message, not a traceback; a missing compiler gives a failing status
+  - foot: berkeDark's include carries only its colours, its cursor and the line that starts the user's own shell (foot.ini's `shell=`, else `$SHELL`) inside the colour interpreter; no font, padding or scrollback; a foot.ini it creates includes the system's first
+- `cli/qwen/reapply-diff-color-patch.py`: makes Qwen Code's ```diff blocks readable with a custom theme (to be run again after each Qwen Code update); it finds first the copy the `qwen` command runs, also looks in Bun's, pnpm's and Volta's folders, reports a copy it cannot change and goes on, and leaves no copy behind when its check fails
 
 ## [1.3.0] - 2026-11-10
 
