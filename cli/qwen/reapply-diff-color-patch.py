@@ -28,9 +28,12 @@ Qwen Code replaces its files when it updates itself, so run this again after eve
     python3 reapply-diff-color-patch.py --restore     put back the files as they were
     python3 reapply-diff-color-patch.py --root DIR    only the Qwen Code copy in DIR (the folder with package.json)
 
-Where it looks: the global npm folder (`npm root -g`), ~/.local/lib/node_modules, and the copies
-Qwen Code's self-update keeps in ~/.qwen/updates/npm/*/versions/* (or under $QWEN_HOME). Only the
-standard library and `node` are used.
+Where it looks: first the copy the `qwen` command on PATH runs (its links followed up to the folder
+with Qwen Code's package.json), then the global npm folder (`npm root -g`), ~/.local/lib/node_modules,
+Bun's global folder (~/.bun/install/global, or under $BUN_INSTALL), pnpm's (`pnpm root -g`, $PNPM_HOME,
+~/.local/share/pnpm), Volta's (~/.volta, or $VOLTA_HOME), and the copies Qwen Code's self-update keeps in
+~/.qwen/updates/npm/*/versions/* (or under $QWEN_HOME). A copy it cannot read or write is reported and
+the others are still done. Only the standard library and `node` are used.
 """
 
 from __future__ import annotations
@@ -54,32 +57,70 @@ BACKUP_SUFFIX = ".berkeDark-backup"
 PACKAGE = Path("@qwen-code") / "qwen-code"
 
 
-def find_trees(root: str | None) -> list[Path]:
-    """The installed copies of Qwen Code: folders with Qwen Code's package.json and a chunks folder."""
+def is_qwen_package(folder: Path) -> bool:
+    try:
+        return json.loads((folder / "package.json").read_text(encoding="utf-8")).get("name") == "@qwen-code/qwen-code"
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
+def running_tree() -> Path | None:
+    """The copy the `qwen` command on PATH runs: its links followed, then up to Qwen Code's package.json."""
+    command = shutil.which("qwen")
+    if command is None:
+        return None
+    try:
+        folder = Path(command).resolve().parent
+    except OSError:
+        return None
+    for candidate in (folder, *folder.parents):
+        if is_qwen_package(candidate):
+            return candidate
+    return None
+
+
+def global_root(tool: str) -> list[Path]:
+    """The global package folder a package manager names (npm root -g, pnpm root -g)."""
+    if shutil.which(tool) is None:
+        return []
+    try:
+        done = subprocess.run([tool, "root", "-g"], capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [Path(done.stdout.strip()) / PACKAGE] if done.returncode == 0 and done.stdout.strip() else []
+
+
+def find_trees(root: str | None) -> tuple[list[Path], Path | None]:
+    """The installed copies of Qwen Code (folders with Qwen Code's package.json and a chunks folder), the one
+    the `qwen` command runs first; and that one."""
+    running = None
     if root:
         candidates = [Path(root).expanduser()]
     else:
         home = Path.home()
-        candidates = [home / ".local/lib/node_modules" / PACKAGE]
-        try:
-            done = subprocess.run(["npm", "root", "-g"], capture_output=True, text=True, timeout=20)
-            if done.returncode == 0 and done.stdout.strip():
-                candidates.append(Path(done.stdout.strip()) / PACKAGE)
-        except (OSError, subprocess.SubprocessError):
-            pass
+        running = running_tree()
+        candidates = ([running] if running else []) + [home / ".local/lib/node_modules" / PACKAGE]
+        candidates += global_root("npm")
+        bun = Path(os.environ.get("BUN_INSTALL", "") or home / ".bun").expanduser()
+        candidates.append(bun / "install/global/node_modules" / PACKAGE)
+        candidates += global_root("pnpm")
+        for pnpm in filter(None, [os.environ.get("PNPM_HOME"), str(home / ".local/share/pnpm")]):
+            candidates += sorted(Path(pnpm).expanduser().glob("global/*/node_modules/" + str(PACKAGE)))
+        volta = Path(os.environ.get("VOLTA_HOME", "") or home / ".volta").expanduser() / "tools/image/packages" / PACKAGE
+        candidates += [volta / "lib/node_modules" / PACKAGE, volta / "node_modules" / PACKAGE]
         qwen_home = Path(os.environ.get("QWEN_HOME", "") or home / ".qwen").expanduser()
         candidates += sorted((qwen_home / "updates/npm").glob("*/versions/*/node_modules/" + str(PACKAGE)))
     trees, seen = [], set()
     for path in candidates:
         try:
             real = path.resolve()
-            name = json.loads((real / "package.json").read_text(encoding="utf-8")).get("name")
-        except (OSError, ValueError):
+            ok = is_qwen_package(real) and (real / "chunks").is_dir()
+        except OSError:
             continue
-        if name == "@qwen-code/qwen-code" and (real / "chunks").is_dir() and real not in seen:
+        if ok and real not in seen:
             seen.add(real)
             trees.append(real)
-    return trees
+    return trees, running
 
 
 def version_of(tree: Path) -> str:
@@ -161,7 +202,8 @@ def patch(tree: Path, dry: bool) -> str:
         return "would-change"
 
     backup = path.with_name(path.name + BACKUP_SUFFIX)
-    if not backup.exists():
+    made_backup = not backup.exists()
+    if made_backup:
         shutil.copy2(path, backup)
     if backup.read_bytes() != data:
         print(f"    {backup.name} differs from the file as it is now; nothing changed", file=sys.stderr)
@@ -176,8 +218,15 @@ def patch(tree: Path, dry: bool) -> str:
             return False, "the written file is not what was meant"
         return node_check(written)
 
-    ok, why = write_checked(path, out, check)
+    try:
+        ok, why = write_checked(path, out, check)
+    except OSError:
+        if made_backup:
+            backup.unlink(missing_ok=True)
+        raise
     if not ok:
+        if made_backup:  # the file stays as it was, so the copy made for it goes
+            backup.unlink(missing_ok=True)
         print(f"    check failed ({why}); the file stays as it was", file=sys.stderr)
         return "error"
     print(f"    changed {path.name} ({len(data)} -> {len(out)} bytes); the original is kept as {backup.name}")
@@ -222,14 +271,18 @@ def main() -> int:
     if shutil.which("node") is None:
         print("node is not on PATH; it is needed to check the changed file. Nothing changed.", file=sys.stderr)
         return 2
-    trees = find_trees(args.root)
+    trees, running = find_trees(args.root)
     if not trees:
         print("No installed Qwen Code found. Give its folder with --root.", file=sys.stderr)
         return 2
     bad = 0
     for tree in trees:
-        print(f"Qwen Code {version_of(tree)}: {tree}")
-        state = restore(tree, args.dry_run) if args.restore else patch(tree, args.dry_run)
+        print(f"Qwen Code {version_of(tree)}: {tree}" + ("  (the one the qwen command runs)" if tree == running else ""))
+        try:
+            state = restore(tree, args.dry_run) if args.restore else patch(tree, args.dry_run)
+        except OSError as error:  # PermissionError among them: this copy is left, the others are still done
+            print(f"    cannot change this copy ({error}); nothing changed in it", file=sys.stderr)
+            state = "error"
         bad += state in ("error", "not-found")
     if args.dry_run:
         print("Dry run: nothing was changed.")

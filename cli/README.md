@@ -41,11 +41,15 @@ changes those two lines in Qwen Code's installed files to the built-in form:
     python3 qwen/reapply-diff-color-patch.py --dry-run    # see what would change; nothing is changed
     python3 qwen/reapply-diff-color-patch.py              # change it, then restart Qwen Code
 
-It looks in the global npm folder, `~/.local/lib/node_modules` and the copies Qwen Code's self-update keeps
-in `~/.qwen/updates`; `--root DIR` names one copy (the folder with Qwen Code's `package.json`). It touches only
-the one file that holds the two lines, keeps it as it was beside it (`<file>.berkeDark-backup`), checks the
-result with `node --check` before putting it in place, and changes nothing when the lines are not found in the
-expected form. A Qwen Code update brings back the original lines: **run it again after every update**. To
+It looks first for the copy the `qwen` command on your PATH runs (following its links to the folder with Qwen
+Code's `package.json`, and says which one that is), then in the global npm folder, `~/.local/lib/node_modules`,
+Bun's global folder (`~/.bun/install/global`), pnpm's and Volta's folders, and the copies Qwen Code's
+self-update keeps in `~/.qwen/updates`; `--root DIR` names one copy (the folder with Qwen Code's
+`package.json`). It touches only the one file that holds the two lines, keeps it as it was beside it
+(`<file>.berkeDark-backup`), checks the result with `node --check` before putting it in place (when the check
+fails, the file and its folder stay as they were, without the copy), and changes nothing when the lines are
+not found in the expected form. A copy it cannot read or write (installed by root, for example) is reported and
+the others are still done. A Qwen Code update brings back the original lines: **run it again after every update**. To
 undo it:
 
     python3 qwen/reapply-diff-color-patch.py --restore
