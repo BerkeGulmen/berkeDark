@@ -2,7 +2,7 @@
   "name": "berkeDark",
   "type": "custom",
   "Background": "@{bg:base.background}",
-  "Foreground": "",
+  "Foreground": "@{base.text}",
   "LightBlue": "@{prose.code.inline}",
   "AccentBlue": "@{code.keyword}",
   "AccentPurple": "@{=orange}",

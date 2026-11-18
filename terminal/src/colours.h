@@ -138,3 +138,13 @@
  * A string never opens right after a word, so such a run is written as plain code text.
  */
 #define SYNTAX_TEXT_COLOUR "255;232;194" /* #ffe8c2, the palette's white: plain code text */
+
+/*
+ * Programs other than Claude Code (2026-11-18). berkeDark's Qwen Code theme names the text colour, because
+ * Qwen Code's OpenTUI interface draws an empty one in its own grey; text in exactly that colour counts as
+ * plain text, so numbers, dates and the colours of styles reach it as they reach text in the terminal's colour.
+ * Where Qwen Code draws its own cursor and the terminal's cursor is not on it, the cell is underlined in the
+ * cursor's colour.
+ */
+#define BODY_FOREGROUND ";2;255;232;194"     /* #ffe8c2, as the arguments after 38 */
+#define CURSOR_UNDERLINE "58;2;255;158;96" /* #ff9e60, the colour of the underline */

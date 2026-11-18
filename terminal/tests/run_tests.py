@@ -576,6 +576,84 @@ REPLY_CASES = [
 ]
 
 
+# Programs other than Claude Code (2026-11-18), as Qwen Code draws: "--filter CHUNK 6 40 other" takes the stream as another
+# program's, "--filter CHUNK 6 40" as Claude Code's.
+BODY = E + b"[38;2;255;232;194m"            # berkeDark's text colour, as Qwen Code's theme now names it
+BODY_COLON = E + b"[38:2::255:232:194m"
+SOFT = E + b"[48;2;212;212;212m"            # Qwen Code's own cursor: the character on a light grey ground
+NO_GROUND = E + b"[49m"
+UNDERLINED = E + b"[0;4;58;2;255;158;96m"   # the underline in the cursor's colour
+FRAME = ON_SCREEN + E + b"[?2026h" + E + b"[?25l"
+OWN_STYLE = E + b"[0 q"                      # the terminal's own cursor style, from foot.ini
+
+OTHER_CASES = [
+    # (name, taken as Claude Code's, given, wanted)
+    ("a number in berkeDark's text colour", False, ON_SCREEN + row_at(2) + BODY + b"pil 60 s",
+     ON_SCREEN + row_at(2) + BODY + b"pil 60 " + painted(2, 5, b"60") + b"s"),
+    ("the text colour written with colons", False, ON_SCREEN + row_at(2) + BODY_COLON + b"pil 60 s",
+     ON_SCREEN + row_at(2) + BODY_COLON + b"pil 60 " + painted(2, 5, b"60") + b"s"),
+    ("a date in berkeDark's text colour", False, ON_SCREEN + row_at(2) + BODY + b"2026-11-18 ",
+     ON_SCREEN + row_at(2) + BODY + b"2026-11-18 " + painted(2, 1, b"2026-11-18", colour=b"232;127;224")),
+    ("a colour one step off stays a colour", False, ON_SCREEN + row_at(2) + E + b"[38;2;255;232;195mpil 60 s",
+     ON_SCREEN + row_at(2) + E + b"[38;2;255;232;195mpil 60 s"),
+    ("under Claude Code the text colour stays a colour", True, ON_SCREEN + row_at(2) + BODY + b"pil 60 s",
+     ON_SCREEN + row_at(2) + BODY + b"pil 60 s"),
+    ("a number in the text colour that grows into a word gets the text colour back", False,
+     ON_SCREEN + row_at(2) + BODY + b"42 " + row_at(2, 3) + b"x" + E + b"[9G",
+     ON_SCREEN + row_at(2) + BODY + b"42 " + painted(2, 1, b"42") + row_at(2, 3) + b"x" + E + b"7" + row_at(2, 1) + E
+     + b"[0m" + BODY + b"4" + row_at(2, 2) + E + b"[0m" + BODY + b"2" + E + b"8" + E + b"[9G"),
+    ("italic in the text colour takes the tint, and the text colour comes back", False,
+     BODY + E + b"[3mx" + E + b"[23my", BODY + E + b"[3m" + ON + b"x" + E + b"[23m" + BODY + b"y"),
+    ("italic in the text colour under Claude Code stays", True, BODY + E + b"[3mx" + E + b"[23my", BODY + E + b"[3mx" + E + b"[23my"),
+    ("the drawn cursor loses its ground where the terminal's cursor stands", False,
+     FRAME + row_at(3) + b"ab" + SOFT + b"c" + NO_GROUND + b"d" + row_at(3, 3) + E + b"[?25h" + FRAME_END,
+     FRAME + row_at(3) + b"ab" + SOFT + NO_GROUND + b"c" + NO_GROUND + b"d" + row_at(3, 3) + E + b"[?25h" + FRAME_END),
+    ("the drawn cursor is underlined where the terminal's cursor is elsewhere", False,
+     FRAME + row_at(3) + b"ab" + SOFT + b"c" + NO_GROUND + b"d" + row_at(5, 1) + E + b"[?25h" + FRAME_END,
+     FRAME + row_at(3) + b"ab" + SOFT + NO_GROUND + b"c" + NO_GROUND + b"d" + row_at(5, 1) + E + b"[?25h" + FRAME_END
+     + E + b"7" + row_at(3, 3) + UNDERLINED + b"c" + E + b"8"),
+    ("the drawn cursor is underlined while the terminal's cursor is hidden", False,
+     FRAME + row_at(3) + b"ab" + SOFT + b"c" + NO_GROUND + row_at(3, 3) + FRAME_END,
+     FRAME + row_at(3) + b"ab" + SOFT + NO_GROUND + b"c" + NO_GROUND + row_at(3, 3) + FRAME_END
+     + E + b"7" + row_at(3, 3) + UNDERLINED + b"c" + E + b"8"),
+    ("the drawn cursor in the text colour keeps it under the underline", False,
+     FRAME + row_at(3) + BODY + b"ab" + SOFT + b"c" + NO_GROUND + row_at(5, 1) + E + b"[?25h" + FRAME_END,
+     FRAME + row_at(3) + BODY + b"ab" + SOFT + NO_GROUND + b"c" + NO_GROUND + row_at(5, 1) + E + b"[?25h" + FRAME_END
+     + E + b"7" + row_at(3, 3) + UNDERLINED + BODY + b"c" + E + b"8"),
+    ("the drawn cursor's ground written with colons", False,
+     FRAME + row_at(3) + E + b"[48:2::212:212:212mc" + NO_GROUND + row_at(3, 1) + E + b"[?25h" + FRAME_END,
+     FRAME + row_at(3) + E + b"[48:2::212:212:212m" + NO_GROUND + b"c" + NO_GROUND + row_at(3, 1) + E + b"[?25h" + FRAME_END),
+    ("a drawn cursor written over before the frame ends is forgotten", False,
+     FRAME + row_at(3) + SOFT + b"c" + NO_GROUND + row_at(3, 1) + b"e" + row_at(5, 1) + E + b"[?25h" + FRAME_END,
+     FRAME + row_at(3) + SOFT + NO_GROUND + b"c" + NO_GROUND + row_at(3, 1) + b"e" + row_at(5, 1) + E + b"[?25h" + FRAME_END),
+    ("under Claude Code a light grey ground stays", True,
+     FRAME + row_at(3) + SOFT + b"c" + NO_GROUND + row_at(5, 1) + E + b"[?25h" + FRAME_END,
+     FRAME + row_at(3) + SOFT + b"c" + NO_GROUND + row_at(5, 1) + E + b"[?25h" + FRAME_END),
+    ("on the normal screen a light grey ground stays", False, SOFT + b"c" + NO_GROUND, SOFT + b"c" + NO_GROUND),
+    ("another light ground stays", False, FRAME + row_at(3) + E + b"[48;2;212;212;213mc" + NO_GROUND + FRAME_END,
+     FRAME + row_at(3) + E + b"[48;2;212;212;213mc" + NO_GROUND + FRAME_END),
+    ("a steady block cursor gives way to the terminal's own", False, E + b"[2 qx", E + b"[2 q" + OWN_STYLE + b"x"),
+    ("a blinking block cursor gives way to the terminal's own", False, E + b"[1 q", E + b"[1 q" + OWN_STYLE),
+    ("a bar and an underline stay", False, E + b"[6 q" + E + b"[4 q" + E + b"[0 q", E + b"[6 q" + E + b"[4 q" + E + b"[0 q"),
+    ("a block cursor on the full screen gives way too", False, ON_SCREEN + E + b"[2 q", ON_SCREEN + E + b"[2 q" + OWN_STYLE),
+    ("under Claude Code a block cursor stays", True, E + b"[2 q" + ON_SCREEN + E + b"[2 q", E + b"[2 q" + ON_SCREEN + E + b"[2 q"),
+    ("a private sequence with a blank stays", False, E + b"[?2 q", E + b"[?2 q"),
+]
+
+
+def run_other_cases():
+    failures = 0
+    for name, is_claude, given, wanted in OTHER_CASES:
+        for chunk in ("65536", "1"):
+            command = [BINARY, "--filter", chunk, "6", "40"] + ([] if is_claude else ["other"])
+            got = subprocess.run(command, input=given, capture_output=True).stdout
+            if got != wanted:
+                failures += 1
+                print(f"FAIL {name} (chunk {chunk}):\n got  {got!r}\n want {wanted!r}")
+    print(f"other programs: {len(OTHER_CASES)} cases, each whole and byte by byte, {failures} failed")
+    return failures
+
+
 def run_reply_cases():
     failures = 0
     for name, given, wanted in REPLY_CASES:
@@ -785,6 +863,23 @@ def run_pty_cases():
                               repr(text))
             os.close(named_master)
 
+        # Qwen Code's looks (2026-11-18): its text colour, its block cursor and its own drawn cursor.
+        for name, is_claude in (("claude", True), ("qwen", False)):
+            script = Path(folder) / name
+            script.write_text("#!/bin/sh\nsleep 0.4\nprintf '\\033[?1049h\\033[2;3H\\033[38;2;255;232;194mpil 77 \\033[39m"
+                              "\\033[2 q\\033[3;1H\\033[48;2;212;212;212mc\\033[49m'\nsleep 0.2\n")
+            script.chmod(0o755)
+            named_pid, named_master = spawn(str(script))
+            text = read_all(named_master, 2)
+            finish(named_pid)
+            failures += check(f"numbers in the text colour outside Claude Code ({name})",
+                              (b"0;38;2;255;0;255m77" in text) != is_claude, repr(text))
+            failures += check(f"the terminal's own cursor style outside Claude Code ({name})", (E + b"[0 q" in text) != is_claude,
+                              repr(text))
+            failures += check(f"the drawn cursor's ground taken away outside Claude Code ({name})",
+                              (b"212;212;212m" + E + b"[49mc" in text) != is_claude, repr(text))
+            os.close(named_master)
+
     os.close(master)
     os.close(slave)
 
@@ -803,6 +898,6 @@ def run_pool_check():
 if __name__ == "__main__":
     signal.signal(signal.SIGCHLD, signal.SIG_DFL)
     failed = (run_stream_cases() + run_box_cases() + run_syntax_cases() + run_number_cases() + run_input_cases()
-              + run_reply_cases() + run_pty_cases() + run_pool_check())
+              + run_reply_cases() + run_other_cases() + run_pty_cases() + run_pool_check())
     print("all passed" if failed == 0 else f"{failed} failed")
     sys.exit(1 if failed else 0)

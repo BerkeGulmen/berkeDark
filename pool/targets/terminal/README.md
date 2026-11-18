@@ -81,6 +81,19 @@ Numbers, dates and times get these colours in plain text of every full-screen pr
 `htop` and so on). The marks, the diff colours and the reply text apply only when the program is
 named `claude`. The colours are in `src/colours.h`.
 
+For programs other than Claude Code (made for Qwen Code, 2026-11-18):
+
+- Text in exactly berkeDark's text colour (`@{base.text}`, as berkeDark's Qwen Code theme names it) counts as
+  plain text, so its numbers, dates and styles get their colours too.
+- A request for a block cursor (`CSI 1 SP q`, `CSI 2 SP q`; Qwen Code's OpenTUI interface sends a steady one) is
+  followed by `CSI 0 SP q`, the terminal's own cursor style; in berkeDark's foot a hollow `@{base.cursor}` box that
+  blinks. An underline or a bar stays. This applies on the normal screen too, so a shell or an editor that asks for a
+  block gets the terminal's own cursor instead.
+- Qwen Code draws a cursor of its own: the character on a light grey ground (`#d4d4d4`), unreadable in cream, at
+  the place of the terminal's cursor. On the full screen berkeDark takes that ground away again, so the terminal's
+  cursor shows the character; where the terminal's cursor is hidden or elsewhere when the frame ends, the cell is
+  underlined in `@{base.cursor}` instead.
+
 Tested on Void Linux with foot 1.28 and Claude Code 2.1.322. Not tested: other distributions,
 other terminals and other ways of installing Claude Code. macOS and Windows are not supported.
 

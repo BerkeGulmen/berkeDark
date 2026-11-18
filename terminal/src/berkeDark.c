@@ -69,6 +69,7 @@ enum {
     LOOK_DIM = 0x20,
     LOOK_ITALIC = 0x40,
     LOOK_OTHER = 0x80,  /* a look berkeDark does not write again: a background, an underline, a colour by value, a tint */
+    LOOK_BODY = 0x01,   /* without LOOK_COLOUR: drawn in berkeDark's text colour by value, which counts as plain text */
 };
 
 /* How a cell stands on the terminal after berkeDark wrote it again. PAINT_NONE: as the program drew it. */
@@ -127,6 +128,8 @@ struct style {
     const char *ground_on; /* the ground berkeDark has on the terminal in its place, if any */
     bool is_apostrophe;    /* the character being printed belongs to a "string" that an apostrophe began */
     bool is_colour_start;  /* the program has set its text colour and printed nothing since */
+    bool is_body;          /* outside Claude Code: the program's colour is exactly berkeDark's text colour, taken as plain text */
+    bool is_soft_cursor;   /* outside Claude Code: the background is Qwen Code's drawn cursor, taken away on the terminal */
 };
 
 struct screen {
@@ -134,6 +137,9 @@ struct screen {
     bool is_claude;  /* the full-screen program is Claude Code: its marks and diff colours apply */
     bool has_saved_cursor, is_insert, is_origin; /* the program's states in which numbers are left alone */
     bool is_no_wrap; /* the program turned automatic wrapping off; a terminal mode, so a new map keeps it */
+    bool is_cursor_hidden; /* the program hid the terminal's cursor; a terminal mode, so a new map keeps it */
+    bool has_soft_cursor;  /* a cell drawn as Qwen Code's cursor stands at soft_row, soft_column since the frame began */
+    int soft_row, soft_column;
     bool has_band_changed;
     bool is_dirty;     /* the map changed since the reply text was last settled */
     int rows, columns; /* 0 rows: no map is kept */
@@ -158,6 +164,7 @@ struct interpreter {
     bool bell_ends_string;
     bool is_plain;   /* the sequence so far holds only digits, ';' and ':' */
     bool is_private; /* it started with '?' */
+    bool has_space;  /* a blank followed the parameters: an intermediate */
     size_t length;
     char parameters[256];
     struct style style, saved_style;
@@ -167,11 +174,23 @@ struct interpreter {
 static struct interpreter interpreter;
 
 static int program_master = -1; /* the pseudo-terminal; -1 under --filter, where the stream is taken as Claude Code's */
+static bool filter_is_claude = true; /* --filter ... other: the stream is taken as another program's */
 
 static void end_gutter_run(struct screen *sc);
 static void end_word(struct screen *sc);
 static bool is_input_row(const struct screen *sc, int row);
 static void put_program_colour(const struct style *s);
+static bool has_map(const struct screen *sc);
+static bool foreground_is_claude(void);
+
+/*
+ * Whether the program is Claude Code, which never draws in berkeDark's text colour by value nor asks for a block
+ * cursor: on the full screen as found when it began, on the normal screen asked now (rarely needed).
+ */
+static bool is_claude_now(const struct screen *sc)
+{
+    return sc->is_alternate ? sc->is_claude : foreground_is_claude();
+}
 
 static unsigned char output[BLOCK_SIZE];
 static size_t output_length;
@@ -217,7 +236,7 @@ static void put(const void *data, size_t size)
  */
 static const char *wanted_tint(const struct style *s)
 {
-    if (s->program_colour || s->dim)
+    if ((s->program_colour && !s->is_body) || s->dim)
         return NULL;
     if (s->bold && s->italic && s->underline)
         return HEADING_COLOUR;
@@ -243,7 +262,7 @@ static void settle_tint(struct style *s, bool colour_changed)
         put("m", 1);
         s->syntax = NULL; /* the tint replaced it on the terminal */
     } else if (wanted == NULL && s->tint != NULL) {
-        put("\033[39m", 5);
+        put_program_colour(s); /* no colour (39), or berkeDark's text colour as the program gave it */
         s->syntax = NULL;
     }
     s->tint = wanted;
@@ -265,11 +284,30 @@ static const char *skip_colour_arguments(const char *p)
     return p;
 }
 
+/*
+ * Whether the parameters from..to name exactly the colour wanted, given with semicolons ("38;2;255;232;194").
+ * Colons count as semicolons and the empty colour space of the colon form ("38:2::255:232:194") is passed over.
+ */
+static bool is_colour_value(const char *from, const char *to, const char *wanted)
+{
+    for (; from < to; ++from) {
+        char c = *from == ':' ? ';' : *from;
+        if (c == ';' && from + 1 < to && from[1] == ':')
+            continue; /* "2::" is "2;" */
+        if (c != *wanted++)
+            return false;
+    }
+    return *wanted == '\0';
+}
+
+/* The background Qwen Code draws its own cursor with on a dark terminal (#d4d4d4), as the arguments of a style mark. */
+#define SOFT_CURSOR_GROUND "48;2;212;212;212"
+
 static void apply_style_sequence(struct interpreter *in)
 {
     struct style *s = &in->style;
     const char *p = in->parameters;
-    bool colour_changed = false;
+    bool colour_changed = false, takes_soft_cursor = false;
 
     for (;;) {
         const char *start = p;
@@ -285,7 +323,7 @@ static void apply_style_sequence(struct interpreter *in)
         switch (code) {
         case 0:
             end_gutter_run(&in->screen);
-            *s = (struct style){0};
+            *s = (struct style){0}; /* is_body and is_soft_cursor too */
             colour_changed = true;
             break;
         case 1: s->bold = true; break;
@@ -305,6 +343,7 @@ static void apply_style_sequence(struct interpreter *in)
             s->program_colour = true;
             s->foreground = (int)code;
             s->is_colour_start = true;
+            s->is_body = false;
             colour_changed = true;
             break;
         case 38: {
@@ -319,11 +358,13 @@ static void apply_style_sequence(struct interpreter *in)
                 length = 0; /* too long to write again; 38 alone is never written back */
             memcpy(s->extended, arguments, length);
             s->extended[length] = '\0';
+            s->is_body = is_colour_value(start, p, "38" BODY_FOREGROUND) && !is_claude_now(&in->screen);
             break;
         }
         case 39:
             s->program_colour = false;
             s->foreground = 0;
+            s->is_body = false;
             colour_changed = true;
             break;
         case 40 ... 47:
@@ -332,6 +373,7 @@ static void apply_style_sequence(struct interpreter *in)
             s->band = false;
             s->ground = 0;
             s->ground_on = NULL;
+            s->is_soft_cursor = false;
             break;
         case 48:
             s->background = true;
@@ -343,11 +385,14 @@ static void apply_style_sequence(struct interpreter *in)
             s->ground_on = NULL; /* the program's own mark reached the terminal after ours */
             if (!has_subparameter)
                 p = skip_colour_arguments(p);
+            s->is_soft_cursor = has_map(&in->screen) && !in->screen.is_claude && is_colour_value(start, p, SOFT_CURSOR_GROUND);
+            takes_soft_cursor = s->is_soft_cursor;
             break;
         case 49:
             s->background = s->band = false;
             s->ground = 0;
             s->ground_on = NULL;
+            s->is_soft_cursor = false;
             break;
         case 58:
             if (!has_subparameter)
@@ -364,6 +409,14 @@ static void apply_style_sequence(struct interpreter *in)
     if (colour_changed)
         s->syntax = NULL; /* the program's own mark reached the terminal after ours */
     settle_tint(s, colour_changed);
+    /*
+     * Qwen Code draws its cursor itself, the character on a light grey ground, where the terminal's own cursor
+     * stands too: in berkeDark's cream the character can hardly be read, and the terminal's cursor (foot's hollow
+     * orange box) is drowned. The ground is taken away again on the terminal; the frame's end looks whether the
+     * terminal's cursor stands on that cell, and underlines it in the cursor's colour if not.
+     */
+    if (takes_soft_cursor && s->is_soft_cursor)
+        put("\033[49m", 5);
 }
 
 /* The map of the screen. A write only ever changes the map, never the program's bytes. */
@@ -390,6 +443,8 @@ static void clear_map(struct screen *sc)
     sc->top = 0;
     sc->bottom = sc->rows - 1;
     sc->has_band_changed = false;
+    sc->has_soft_cursor = false;
+    sc->soft_row = sc->soft_column = -1;
 }
 
 static void set_map_size(struct screen *sc, int rows, int columns)
@@ -414,6 +469,8 @@ static void set_cell(struct screen *sc, int row, int column, unsigned char flags
     sc->glyphs[row][column] = 0; /* what the program writes is no longer painted */
     sc->looks[row][column] = 0;
     sc->is_dirty = true;
+    if (row == sc->soft_row && column == sc->soft_column)
+        sc->has_soft_cursor = false;
 }
 
 static unsigned glyph_at(const struct screen *sc, int row, int column)
@@ -486,6 +543,7 @@ static void scroll_rows(struct screen *sc, int top, int bottom, int count)
     sc->run_kind = 0;
     sc->run_length = 0;
     sc->is_dirty = true;
+    sc->has_soft_cursor = false; /* the cell moved; its new place is not followed */
 }
 
 static void line_feed(struct screen *sc)
@@ -787,8 +845,8 @@ static void print_code_point(struct interpreter *in, unsigned code_point)
     const struct style *s = &in->style;
     bool is_word_character = !is_separator(code_point);
 
-    if (code_point != ' ' && s->foreground == 0 && !s->background && !s->dim && !s->italic && !s->underline &&
-        !s->strike && !s->reverse && s->tint == NULL)
+    if (code_point != ' ' && (s->foreground == 0 || s->is_body) && !s->background && !s->dim && !s->italic &&
+        !s->underline && !s->strike && !s->reverse && s->tint == NULL)
         flags |= CELL_PLAIN;
     if (code_point != ' ' && s->bold)
         flags |= CELL_BOLD;
@@ -797,15 +855,21 @@ static void print_code_point(struct interpreter *in, unsigned code_point)
 
     unsigned char look = 0;
 
-    if (s->background || s->underline || s->strike || s->reverse || s->foreground == 38 || s->tint != NULL) {
-        look = LOOK_OTHER;
+    if (s->background || s->underline || s->strike || s->reverse || (s->foreground == 38 && !s->is_body) || s->tint != NULL) {
+        look = LOOK_OTHER | (s->is_body ? LOOK_BODY : 0); /* the body mark only tells a cell written again its colour */
     } else {
-        if (s->foreground != 0)
+        if (s->is_body)
+            look |= LOOK_BODY;
+        else if (s->foreground != 0)
             look |= (unsigned char)(LOOK_COLOUR | (s->foreground < 90 ? s->foreground - 30 : s->foreground - 82));
         if (s->dim)
             look |= LOOK_DIM;
         if (s->italic)
             look |= LOOK_ITALIC;
+    }
+    if (s->is_soft_cursor) {
+        sc->soft_row = sc->row;
+        sc->soft_column = sc->column;
     }
     for (int i = 0; i < width; ++i) {
         set_cell(sc, sc->row, sc->column, flags);
@@ -814,6 +878,8 @@ static void print_code_point(struct interpreter *in, unsigned code_point)
                                           (s->is_apostrophe ? (unsigned)GLYPH_APOSTROPHE : 0);
         sc->text[sc->row][sc->column++] = !is_word_character ? 0 : code_point < 0x80 ? (unsigned char)code_point : 0x80;
     }
+    if (s->is_soft_cursor)
+        sc->has_soft_cursor = true; /* after set_cell, which forgets a cell drawn as the cursor when it is written again */
     follow_word(sc, code_point, width, first_column);
     if (is_prompt_mark)
         redraw_prompt_mark(&in->style, sc->is_claude);
@@ -1241,6 +1307,8 @@ static void end_word(struct screen *sc)
         if ((column < paint_from || column >= paint_to) && is_number_paint(paint_at(sc, row, column))) {
             put_move(row, column);
             put_text((sc->cells[row][column] & CELL_BOLD) != 0 ? "\033[0;1m" : "\033[0m");
+            if ((sc->looks[row][column] & (LOOK_COLOUR | LOOK_OTHER | LOOK_BODY)) == LOOK_BODY)
+                put_text("\033[38" BODY_FOREGROUND "m");
             put(&sc->text[row][column], 1);
             set_paint(sc, row, column, PAINT_NONE);
         }
@@ -2287,7 +2355,7 @@ static void settle_reply(struct interpreter *in)
 static bool foreground_is_claude(void)
 {
     if (program_master < 0)
-        return true;
+        return filter_is_claude;
 
     char path[64], name[32] = "";
     pid_t group = tcgetpgrp(program_master);
@@ -2303,6 +2371,53 @@ static bool foreground_is_claude(void)
     bool has_name = fgets(name, sizeof name, file) != NULL;
     fclose(file);
     return has_name && strcmp(name, "claude\n") == 0;
+}
+
+/*
+ * The frame has ended. Where Qwen Code drew its cursor, berkeDark took the light ground away; the terminal's own
+ * cursor shows the place when it stands on that cell. Where it does not, or is hidden, the cell is underlined in
+ * the cursor's colour, so the place is never lost and the character stays readable.
+ */
+static void settle_soft_cursor(struct screen *sc)
+{
+    if (!sc->has_soft_cursor)
+        return;
+    sc->has_soft_cursor = false;
+
+    int row = sc->soft_row, column = sc->soft_column;
+
+    if (sc->is_claude || row < 0 || row >= sc->rows || column < 0 || column >= sc->columns)
+        return;
+    if (!sc->is_cursor_hidden && sc->row == row && sc->column == column)
+        return; /* the terminal's own cursor is there */
+    if (sc->has_saved_cursor || sc->is_insert || sc->is_origin)
+        return; /* writing then would take the program's saved cursor, or land elsewhere */
+
+    unsigned glyph = sc->glyphs[row][column];
+
+    if ((glyph & (GLYPH_JOINED | GLYPH_TAIL)) != 0 || (glyph & GLYPH_CODE) == 0)
+        return;
+    put_text("\0337");
+    put_move(row, column);
+    put_text("\033[0;4;" CURSOR_UNDERLINE "m");
+    if ((sc->looks[row][column] & LOOK_BODY) != 0)
+        put_text("\033[38" BODY_FOREGROUND "m");
+    put_code_point(glyph & GLYPH_CODE);
+    put_text("\0338");
+}
+
+/*
+ * A program other than Claude Code asks the terminal for a block cursor (CSI 1 SP q or CSI 2 SP q), as Qwen
+ * Code's OpenTUI interface does, steady: the character under it is hard to read, and the terminal's own cursor
+ * is lost (in berkeDark's foot a hollow orange box that blinks). Right after the program's request berkeDark
+ * asks for the terminal's own style again (CSI 0 SP q, "the style from foot.ini"). An underline or a bar stays.
+ */
+static void settle_cursor_style(struct interpreter *in)
+{
+    const struct screen *sc = &in->screen;
+    int style = read_parameter(in->parameters);
+    if ((style == 1 || style == 2) && !is_claude_now(sc))
+        put_text("\033[0 q");
 }
 
 static void apply_private_modes(struct interpreter *in, bool is_on)
@@ -2322,9 +2437,12 @@ static void apply_private_modes(struct interpreter *in, bool is_on)
             sc->column = 0;
         } else if (mode == 7) {
             sc->is_no_wrap = !is_on;
+        } else if (mode == 25) {
+            sc->is_cursor_hidden = !is_on;
         } else if (mode == 2026 && !is_on && has_map(sc)) {
             draw_box(in);
             settle_reply(in);
+            settle_soft_cursor(sc);
         }
     }
 }
@@ -2335,6 +2453,12 @@ static void finish_control_sequence(struct interpreter *in, unsigned char final)
         return;
 
     in->parameters[in->length] = '\0';
+
+    if (in->has_space) {
+        if (final == 'q' && !in->is_private)
+            settle_cursor_style(in);
+        return;
+    }
 
     if (in->is_private) {
         if (final == 'h' || final == 'l')
@@ -2375,6 +2499,7 @@ static void track(struct interpreter *in, unsigned char c)
             in->length = 0;
             in->is_plain = true;
             in->is_private = false;
+            in->has_space = false;
         } else if (c == ']' || c == 'P' || c == 'X' || c == '^' || c == '_') {
             in->state = STRING;
             in->bell_ends_string = c == ']';
@@ -2397,6 +2522,7 @@ static void track(struct interpreter *in, unsigned char c)
             clear_map(&in->screen);
             in->screen.is_alternate = false;
             in->screen.is_no_wrap = false;
+            in->screen.is_cursor_hidden = false;
         } else if (c == 'M' && has_map(&in->screen)) {
             reverse_index(&in->screen);
         } else if (c == 'D' && has_map(&in->screen)) {
@@ -2426,7 +2552,9 @@ static void track(struct interpreter *in, unsigned char c)
             in->is_private = true;
         } else if (c >= 0x20) {
             bool fits = in->length + 1 < sizeof in->parameters;
-            if (fits && (isdigit(c) || c == ';' || c == ':'))
+            if (c == ' ' && !in->has_space)
+                in->has_space = true; /* an intermediate: CSI Ps SP q sets the cursor's style */
+            else if (fits && !in->has_space && (isdigit(c) || c == ';' || c == ':'))
                 in->parameters[in->length++] = (char)c;
             else
                 in->is_plain = false;
@@ -2858,6 +2986,8 @@ int main(int argc, char **argv)
 {
     setlocale(LC_CTYPE, "C.UTF-8");
 
+    if (argc > 5 && strcmp(argv[1], "--filter") == 0 && strcmp(argv[5], "other") == 0)
+        filter_is_claude = false;
     if (argc > 1 && strcmp(argv[1], "--filter") == 0)
         return run_filter(argc > 2 ? strtoul(argv[2], NULL, 10) : BLOCK_SIZE,
                           argc > 4 ? atoi(argv[3]) : 0, argc > 4 ? atoi(argv[4]) : 0);

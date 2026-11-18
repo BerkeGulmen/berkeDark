@@ -85,6 +85,10 @@ Copy `terminal/oh-my-zsh/berkeDark.zsh-theme` to `~/.oh-my-zsh/custom/themes/` a
 }
 ```
 
+These are VS Code settings (`settings.json`). The two cursor settings change only the cursor of VS Code's
+editor. A terminal's cursor is set in the terminal (foot: `[cursor]` in `foot.ini`); the cursor Qwen Code draws
+is made to give way to it by the terminal's colour interpreter (see `terminal/README.md`).
+
 VS Code skips a font that is not installed and takes the next one, so these lists work on every system. The editor prefers JetBrainsMono Nerd Font, then plain JetBrains Mono; on macOS it then has Menlo. The terminal prefers Monaco on macOS, then Terminess Nerd Font. Without those, both use what the system already has: Cascadia Mono or Consolas on Windows and DejaVu Sans Mono on most Linux systems. JetBrainsMono and Terminess Nerd Font are free from [Nerd Fonts](https://www.nerdfonts.com/font-downloads).
 
 ## Language Support

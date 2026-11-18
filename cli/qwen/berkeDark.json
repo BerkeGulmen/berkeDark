@@ -2,7 +2,7 @@
   "name": "berkeDark",
   "type": "custom",
   "Background": "#070f1f",
-  "Foreground": "",
+  "Foreground": "#ffe8c2",
   "LightBlue": "#a3a5f5",
   "AccentBlue": "#57bfff",
   "AccentPurple": "#ff9e60",
