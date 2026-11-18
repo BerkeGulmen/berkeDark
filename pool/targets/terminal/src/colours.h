@@ -13,6 +13,12 @@
  */
 #define BAND_BACKGROUND "48;2;@{bg:chat.user.message}" /* @{bg:chat.user.message|#} */
 #define BOX_COLOUR "38;2;@{chat.user.message.border}"       /* @{chat.user.message.border|#} */
+#define BOX_LINE_COLOUR "@{chat.user.message.border}"       /* the same, as the arguments after 38;2; */
+/*
+ * The words of a sent message. Claude Code draws them in its theme's text colour; Grok draws them bold in the
+ * terminal's text colour, and berkeDark writes them again in this one (2026-11-18).
+ */
+#define USER_TEXT_COLOUR "@{chat.user.message.text}" /* @{chat.user.message.text|#} */
 
 /*
  * Claude Code's prompt mark at the start of the input row and of the user's rows (the author, 2026-11-08):
@@ -26,7 +32,7 @@
 /*
  * The text typed into Claude Code's input box (the author, 2026-11-10). The program gives it no colour,
  * so it looked like the reply text. The hint of an empty box stays dim, and shell mode (the "!" mark)
- * keeps the program's look. The author also liked #00ff00.
+ * keeps the program's look. The author also liked #00ff00. Grok's input box takes it too (2026-11-18).
  */
 #define INPUT_TEXT_COLOUR "@{chat.user.input.text}" /* @{chat.user.input.text|#}, berkeDark's bright green */
 

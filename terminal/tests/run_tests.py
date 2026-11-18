@@ -677,14 +677,35 @@ def run_other_cases():
 # Grok 1.0.89 in its terminal theme (2026-11-18): "--filter CHUNK 6 40 grok" takes the stream as Grok's.
 GROK_FRAME = ON_SCREEN + E + b"[?2026h"
 WINE = b"48;2;38;3;7"
+BAND_TEXT = E + b"[0;1;38;2;111;220;240;" + WINE + b"m"   # the words of a sent message: the pool's turquoise, on the band
+TYPED = E + b"[0;38;2;63;255;127m"                          # what the user types: the pool's spring green
+
+
+def grok_box_row(row, inside):
+    """A band row inside the box: the box's thin side, what is inside, the other side (columns 3 to 38 of 40)."""
+    return row_at(row, 3) + SIDE + "▏".encode() + inside + SIDE + "▕".encode()
+
+
+GROK_EMPTY_BAND = E + b"[0;" + WINE + b"m" + b" " * 34
 GROK_CASES = [
-    ("the user's message gets the band, with the empty rows around it",
+    ("the user's message gets the band and the box, with the empty rows around it",
      GROK_FRAME + row_at(3, 6) + E + b"[1m" + "❯ hi".encode() + E + b"[22m" + FRAME_END,
      GROK_FRAME + row_at(3, 6) + E + b"[1m" + "❯ hi".encode() + E + b"[22m" + FRAME_END + E + b"[?2026h" + E + b"7"
-     + row_at(2, 3) + E + b"[0;" + WINE + b"m" + b" " * 36
-     + row_at(3, 3) + E + b"[0;" + WINE + b"m   " + E + b"[0;1;" + WINE + b"m" + "❯".encode() + E + b"[0;" + WINE + b"m "
-     + E + b"[0;1;" + WINE + b"mhi" + E + b"[0;" + WINE + b"m" + b" " * 29
-     + row_at(4, 3) + E + b"[0;" + WINE + b"m" + b" " * 36 + E + b"8" + E + b"[?2026l"),
+     + row_at(1, 3) + LINE + "▁".encode() * 36
+     + grok_box_row(2, GROK_EMPTY_BAND)
+     + grok_box_row(3, E + b"[0;" + WINE + b"m  " + E + b"[0;1;" + WINE + b"m" + "❯".encode() + E + b"[0;" + WINE + b"m "
+                    + BAND_TEXT + b"hi" + E + b"[0;" + WINE + b"m" + b" " * 28)
+     + grok_box_row(4, GROK_EMPTY_BAND)
+     + row_at(5, 3) + LINE + "▔".encode() * 36 + E + b"8" + E + b"[?2026l"),
+    ("what the user types in the input box takes the typed colour; the hint stays",
+     GROK_FRAME + row_at(2, 3) + "╭────╮".encode() + row_at(3, 3) + "│ ❯ hi ab ".encode() + E + b"[2;3mipucu" + E + b"[0m"
+     + "  │".encode() + row_at(4, 3) + "╰────╯".encode() + FRAME_END,
+     GROK_FRAME + row_at(2, 3) + "╭────╮".encode() + row_at(3, 3) + "│ ❯ hi ab ".encode() + E + b"[2;3mipucu" + E + b"[0m"
+     + "  │".encode() + row_at(4, 3) + "╰────╯".encode() + FRAME_END + E + b"[?2026h" + E + b"7" + row_at(3, 7) + TYPED + b"hi"
+     + row_at(3, 10) + b"ab" + E + b"8" + E + b"[?2026l"),
+    ("a bordered row with the mark but no box top above it stays",
+     GROK_FRAME + row_at(3, 3) + "│ ❯ hi │".encode() + FRAME_END,
+     GROK_FRAME + row_at(3, 3) + "│ ❯ hi │".encode() + FRAME_END),
     ("code above a language row takes the pool's classes",
      GROK_FRAME + row_at(2, 3) + E + b"[38;5;5mdef" + E + b"[39m " + E + b"[38;5;4mf" + E + b"[39m" + E + b"[38;5;4m(" + E
      + b"[38;5;3mr" + E + b"[38;5;4m)" + E + b"[38;5;6m:" + E + b"[39m x = " + E + b"[38;5;1m42" + E + b"[39m" + row_at(3, 3)
@@ -743,6 +764,8 @@ GROK_CASES_8 = [
 GROK_RECORDING = Path(__file__).resolve().parent / "recordings" / "grok-1.0.89-reply-90x150.bin.gz"
 GROK_RECORDING_2 = Path(__file__).resolve().parent / "recordings" / "grok-1.0.89-reply2-90x150.bin.gz"
 GROK_RECORDING_EDIT = Path(__file__).resolve().parent / "recordings" / "grok-1.0.89-edit-90x150.bin.gz"
+# Grok typing "Bana ornek 42" in its input box, sending it, and replying (foot, terminal theme, 2026-11-18).
+GROK_RECORDING_BAND = Path(__file__).resolve().parent / "recordings" / "grok-1.0.89-band-input-90x150.bin.gz"
 
 
 def run_grok_cases():
@@ -764,8 +787,9 @@ def run_grok_cases():
             got = subprocess.run([BINARY, "--filter", chunk, "8", "40", "grok"], input=given, capture_output=True).stdout
             ok = got.startswith(given) and (added is None or got[len(given):] == added)
             if name.startswith("a number on the band"):
-                ok = got.endswith(b"\x1b[0;1;38;2;255;0;255;48;2;38;3;7m42" + E + b"[0;48;2;38;3;7m" + b" " * 25 + row_at(4, 3) + E
-                                  + b"[0;48;2;38;3;7m" + b" " * 36 + E + b"8" + E + b"[?2026l")
+                ok = got.endswith(BAND_TEXT + b"pil" + E + b"[0;" + WINE + b"m " + E + b"[0;1;38;2;255;0;255;48;2;38;3;7m42" + E
+                                  + b"[0;48;2;38;3;7m" + b" " * 24 + SIDE + "▕".encode() + grok_box_row(4, GROK_EMPTY_BAND)
+                                  + row_at(5, 3) + LINE + "▔".encode() * 36 + E + b"8" + E + b"[?2026l")
             if not ok:
                 failures += 1
                 print(f"FAIL {name} (chunk {chunk}):\n got  {got!r}")
@@ -796,6 +820,21 @@ def run_grok_cases():
     failures += check("grok edit recording: removed row on the removed ground", b"31;48;2;40;26;45m" in whole)
     failures += check("grok edit recording: added row on the added ground", b"32;48;2;29;42;43m" in whole)
     failures += check("grok edit recording: a number in the text is no line number", b"32;48;2;29;42;43m    pi = 3.141592653" in whole)
+    stream = gzip.decompress(GROK_RECORDING_BAND.read_bytes())
+    whole = subprocess.run([BINARY, "--filter", "65536", "90", "150", "grok"], input=stream, capture_output=True).stdout
+    bytewise = subprocess.run([BINARY, "--filter", "7", "90", "150", "grok"], input=stream, capture_output=True).stdout
+    failures += check("grok band recording: the same in pieces of 7 bytes", whole == bytewise)
+    for what, needle in (("message text in the pool's turquoise", BAND_TEXT + b"Bana"),
+                         ("number on the band keeps its colour", b"38;2;255;0;255;" + WINE + b"m42"),
+                         ("the box's top row", row_at(3, 3) + LINE + "▁".encode() * 146),
+                         ("the box's bottom row", row_at(7, 3) + LINE + "▔".encode() * 146),
+                         ("the box's left side", row_at(4, 3) + SIDE + "▏".encode()),
+                         ("the box's right side", SIDE + "▕".encode() + row_at(5, 3)),
+                         ("typed text in the pool's spring green", row_at(86, 7) + TYPED + b"B"),
+                         ("the mark stays as Grok drew it", E + b"[0;1;" + WINE + b"m" + "❯".encode())):
+        failures += check(f"grok band recording: {what}", needle in whole)
+    failures += check("grok band recording: Grok's characters all kept", all(
+        stream.count(c.encode()) <= whole.count(c.encode()) for c in "❯│╭╰─"))
     return failures
 
 

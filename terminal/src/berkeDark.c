@@ -124,7 +124,15 @@ enum {
     PAINT_EDIT_REMOVED,
     PAINT_EDIT_GUTTER_ADDED, /* its line numbers */
     PAINT_EDIT_GUTTER_REMOVED,
+    PAINT_BAND_TEXT,         /* the words of a message on Grok's band */
+    PAINT_INPUT_TEXT,        /* what the user types in Grok's input box */
+    PAINT_BOX_TOP,           /* the box around Grok's band, drawn as under Claude Code: the row above */
+    PAINT_BOX_BOTTOM,        /* the row below */
+    PAINT_BOX_LEFT,          /* the band's first and last cell */
+    PAINT_BOX_RIGHT,
+    PAINT_KINDS
 };
+_Static_assert(PAINT_KINDS <= (GLYPH_PAINT >> PAINT_SHIFT) + 1, "a paint kind must fit in the glyph map");
 
 enum { NO_EDGE, TOP_EDGE, BOTTOM_EDGE, STALE_EDGE };
 
@@ -2280,6 +2288,12 @@ static const char *paint_colour(int kind)
     case PAINT_QUOTE_TEXT: return QUOTE_TEXT_COLOUR;
     case PAINT_EDIT_GUTTER_ADDED:
     case PAINT_EDIT_GUTTER_REMOVED: return EDIT_GUTTER_COLOUR;
+    case PAINT_BAND_TEXT: return USER_TEXT_COLOUR;
+    case PAINT_INPUT_TEXT: return INPUT_TEXT_COLOUR;
+    case PAINT_BOX_TOP:
+    case PAINT_BOX_BOTTOM:
+    case PAINT_BOX_LEFT:
+    case PAINT_BOX_RIGHT: return BOX_LINE_COLOUR;
     default: return NULL;
     }
 }
@@ -2295,7 +2309,10 @@ static unsigned paint_ground(int kind)
     switch (kind) {
     case PAINT_BAND:
     case PAINT_BAND_NUMBER:
-    case PAINT_BAND_DATE: return GROUND_BAND;
+    case PAINT_BAND_DATE:
+    case PAINT_BAND_TEXT:
+    case PAINT_BOX_LEFT:
+    case PAINT_BOX_RIGHT: return GROUND_BAND;
     case PAINT_EDIT_ADDED:
     case PAINT_EDIT_GUTTER_ADDED: return GROUND_ADDED;
     case PAINT_EDIT_REMOVED:
@@ -2371,6 +2388,10 @@ static void put_painted_glyph(const struct screen *sc, int row, int column, int 
     case PAINT_TASK_DONE: put_text(TASK_DONE_MARK); break;
     case PAINT_RULE: put_text(RULE_MARK); break;
     case PAINT_HIDDEN: put_text(" "); break;
+    case PAINT_BOX_TOP: put_text("▁"); break; /* the same blocks as draw_box */
+    case PAINT_BOX_BOTTOM: put_text("▔"); break;
+    case PAINT_BOX_LEFT: put_text("▏"); break;
+    case PAINT_BOX_RIGHT: put_text("▕"); break;
     default: put_code_point(glyph != 0 ? glyph : ' '); break;
     }
 }
@@ -2473,7 +2494,12 @@ static void settle_reply(struct interpreter *in)
  * it asks for their colours, and it does not ask foot. A message is a row whose text starts with Grok's mark, a bold
  * "❯" in the text colour, then a blank and bold text; its further rows start bold under that text. berkeDark lays
  * the band of its pool under them, with the empty row above and below, across the width the band takes (the mark's
- * column less three, at both edges). Numbers and dates on it keep their colours.
+ * column less three, at both edges). The words of the message take the pool's sent text (the mark stays as Grok
+ * drew it), numbers and dates on it keep their colours. Around the band goes the box drawn under Claude Code: its
+ * thin blocks in the box's colour on the band's first and last cell, on the empty row above and on the one below.
+ *
+ * The input box: rows inside Grok's frame ("╭" above, "│" first) whose first row holds Grok's "❯". What the user
+ * types there, in the terminal's text colour, takes the pool's typed text; the hint (dim, slanted) stays.
  *
  * Blocks. Grok draws a block of code, a quote or a table without a frame; the row under it holds Grok's grey "◇"
  * and the block's kind ("python", "diff", "quote", "table"). The block reaches up to the first empty row, and on
@@ -2489,7 +2515,7 @@ static void settle_reply(struct interpreter *in)
  * task boxes, as in Claude Code's replies.
  */
 enum { GROK_ROW_BAND = 1, GROK_ROW_CODE = 2, GROK_ROW_DIFF = 4, GROK_ROW_QUOTE = 8, GROK_ROW_TABLE = 16, GROK_ROW_EDIT = 32,
-       GROK_ROW_LABEL = 64 };
+       GROK_ROW_LABEL = 64, GROK_ROW_INPUT = 128 };
 
 static bool is_grok_text_cell(const struct screen *sc, int row, int column)
 {
@@ -2768,11 +2794,52 @@ static void want_grok_text(const struct screen *sc, int row, unsigned char *want
     }
 }
 
+/*
+ * The first row of Grok's input box: "│", a blank, "❯", a blank, under the box's "╭" in the same column. Gives
+ * the column of the frame and the column the typed text starts at.
+ */
+static bool is_grok_input_row(const struct screen *sc, int row, int *border, int *text)
+{
+    int start = first_text(sc, row, 0);
+
+    if (row < 1 || start + 4 >= sc->columns || glyph_at(sc, row, start) != 0x2502 || glyph_at(sc, row - 1, start) != 0x256d ||
+        !is_gap(sc, row, start + 1) || glyph_at(sc, row, start + 2) != 0x276f || !is_gap(sc, row, start + 3))
+        return false;
+    *border = start;
+    *text = start + 4;
+    return true;
+}
+
+/* What the user typed on a row of the input box: plain text between the frame's two "│". */
+static void want_grok_input(const struct screen *sc, int row, int text, unsigned char *want)
+{
+    int right = sc->columns - 1;
+
+    while (right > text && glyph_at(sc, row, right) != 0x2502)
+        --right;
+    for (int column = text; column < right; ++column)
+        if (is_light(sc, row, column))
+            want[column] = PAINT_INPUT_TEXT;
+}
+
+/* The box around the band, on its first and last cell: only where Grok left the cell empty. */
+static void want_grok_band_sides(const struct screen *sc, int row, int left, unsigned char *want)
+{
+    int right = sc->columns - 1 - left;
+
+    if (right <= left)
+        return;
+    if (sc->cells[row][left] == 0 && (sc->looks[row][left] & LOOK_OTHER) == 0)
+        want[left] = PAINT_BOX_LEFT;
+    if (sc->cells[row][right] == 0 && (sc->looks[row][right] & LOOK_OTHER) == 0)
+        want[right] = PAINT_BOX_RIGHT;
+}
+
 static void settle_grok(struct screen *sc)
 {
-    static unsigned char facts[MAX_ROWS], left_of[MAX_ROWS], want[MAX_COLUMNS];
+    static unsigned char facts[MAX_ROWS], left_of[MAX_ROWS], mark_of[MAX_ROWS], edge_of[MAX_ROWS], want[MAX_COLUMNS];
     bool has_begun = false;
-    int kind_column;
+    int kind_column, border, text;
 
     if (!sc->is_grok || !sc->is_dirty || sc->has_saved_cursor || sc->is_insert || sc->is_origin)
         return;
@@ -2793,6 +2860,17 @@ static void settle_grok(struct screen *sc)
                  r <= (last + 1 < sc->rows && is_blank_row(sc, last + 1) ? last + 1 : last); ++r) {
                 facts[r] |= GROK_ROW_BAND;
                 left_of[r] = (unsigned char)(left < 255 ? left : 255);
+                mark_of[r] = (unsigned char)(start < 255 ? start : 255);
+            }
+            row = last;
+        } else if (is_grok_input_row(sc, row, &border, &text)) {
+            int last = row;
+
+            while (last + 1 < sc->rows && first_text(sc, last + 1, 0) == border && glyph_at(sc, last + 1, border) == 0x2502)
+                ++last;
+            for (int r = row; r <= last; ++r) {
+                facts[r] |= GROK_ROW_INPUT;
+                left_of[r] = (unsigned char)(text < 255 ? text : 255);
             }
             row = last;
         } else if (is_grok_label_row(sc, row, &kind_column)) {
@@ -2841,15 +2919,38 @@ static void settle_grok(struct screen *sc)
         if (up >= 0 && is_grok_tool_row(sc, up))
             facts[row] |= GROK_ROW_EDIT;
     }
+    /* The box's empty rows above and below each run of band rows, as draw_box finds them under Claude Code. */
+    memset(edge_of, 0, sizeof edge_of);
+    for (int row = 0; row < sc->rows; ++row) {
+        if ((facts[row] & GROK_ROW_BAND) == 0)
+            continue;
+        if (row > 0 && facts[row - 1] == 0 && is_blank_row(sc, row - 1)) {
+            edge_of[row - 1] = PAINT_BOX_TOP;
+            left_of[row - 1] = left_of[row];
+        }
+        if (row + 1 < sc->rows && facts[row + 1] == 0 && is_blank_row(sc, row + 1) && edge_of[row + 1] == 0) {
+            edge_of[row + 1] = PAINT_BOX_BOTTOM;
+            left_of[row + 1] = left_of[row];
+        }
+    }
     for (int row = 0; row < sc->rows; ++row) {
         memset(want, PAINT_NONE, (size_t)sc->columns);
         if ((facts[row] & GROK_ROW_BAND) != 0) {
             int left = left_of[row];
 
-            for (int column = left; column < sc->columns - left; ++column)
+            for (int column = left; column < sc->columns - left; ++column) {
                 if ((sc->looks[row][column] & LOOK_OTHER) == 0)
                     want[column] = PAINT_BAND;
+                if (column != mark_of[row] && is_grok_text_cell(sc, row, column))
+                    want[column] = PAINT_BAND_TEXT;
+            }
             want_grok_numbers(sc, row, PAINT_BAND_NUMBER, PAINT_BAND_DATE, want);
+            want_grok_band_sides(sc, row, left, want);
+        } else if (edge_of[row] != 0) {
+            for (int column = left_of[row]; column < sc->columns - left_of[row]; ++column)
+                want[column] = edge_of[row];
+        } else if ((facts[row] & GROK_ROW_INPUT) != 0) {
+            want_grok_input(sc, row, left_of[row], want);
         } else if ((facts[row] & GROK_ROW_CODE) != 0) {
             want_grok_code(sc, row, (facts[row] & GROK_ROW_DIFF) != 0, want);
         } else if ((facts[row] & GROK_ROW_QUOTE) != 0) {
