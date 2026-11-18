@@ -681,6 +681,8 @@ BAND_TEXT = E + b"[0;1;38;2;111;220;240;" + WINE + b"m"   # the words of a sent 
 TYPED = E + b"[0;38;2;63;255;127m"                          # what the user types: the pool's spring green
 SENT_MARK_ON_BAND = E + b"[0;1;38;2;250;252;255;" + WINE + b"m" + "▶".encode()  # Grok's ❯ on the band, as under Claude Code
 INPUT_MARK_WHITE = E + b"[0;38;2;250;252;255m" + "❯".encode()               # Grok's ❯ in its input box, white
+FAINT = E + b"[0;38;2;110;115;128m"            # Grok's dim secondary text: the pool's faint grey
+FAINT_SLANTED = E + b"[0;3;38;2;110;115;128m"   # the same, where Grok slants it (the input box's hint)
 
 
 def grok_box_row(row, inside):
@@ -699,13 +701,19 @@ GROK_CASES = [
                     + BAND_TEXT + b"hi" + E + b"[0;" + WINE + b"m" + b" " * 28)
      + grok_box_row(4, GROK_EMPTY_BAND)
      + row_at(5, 3) + LINE + "▔".encode() * 36 + E + b"8" + E + b"[?2026l"),
-    ("in the input box the mark turns white and what the user types takes the typed colour; the hint stays",
+    ("in the input box the mark turns white, what the user types takes the typed colour, the hint the faint grey",
      GROK_FRAME + row_at(2, 3) + "╭────╮".encode() + row_at(3, 3) + "│ ❯ hi ab ".encode() + E + b"[2;3mipucu" + E + b"[0m"
      + "  │".encode() + row_at(4, 3) + "╰────╯".encode() + FRAME_END,
      GROK_FRAME + row_at(2, 3) + "╭────╮".encode() + row_at(3, 3) + "│ ❯ hi ab ".encode() + E + b"[2;3mipucu" + E + b"[0m"
      + "  │".encode() + row_at(4, 3) + "╰────╯".encode() + FRAME_END + E + b"[?2026h" + E + b"7" + row_at(3, 5) + INPUT_MARK_WHITE
      + row_at(3, 7) + TYPED + b"hi"
-     + row_at(3, 10) + b"ab" + E + b"8" + E + b"[?2026l"),
+     + row_at(3, 10) + b"ab" + row_at(3, 13) + FAINT_SLANTED + b"ipucu" + E + b"8" + E + b"[?2026l"),
+    ("dim secondary text takes the faint grey; grey 8, plain and bold text stay",
+     GROK_FRAME + row_at(2, 3) + E + b"[2mWorked for" + E + b"[22m" + row_at(3, 3) + E + b"[1mEnter" + E + b"[22m" + E + b"[2m:send"
+     + E + b"[22m" + row_at(4, 3) + E + b"[38;5;8mgri" + E + b"[39m duz" + FRAME_END,
+     GROK_FRAME + row_at(2, 3) + E + b"[2mWorked for" + E + b"[22m" + row_at(3, 3) + E + b"[1mEnter" + E + b"[22m" + E + b"[2m:send"
+     + E + b"[22m" + row_at(4, 3) + E + b"[38;5;8mgri" + E + b"[39m duz" + FRAME_END + E + b"[?2026h" + E + b"7" + row_at(2, 3) + FAINT
+     + b"Worked" + row_at(2, 10) + b"for" + row_at(3, 8) + FAINT + b":send" + E + b"8" + E + b"[?2026l"),
     ("a bordered row with the mark but no box top above it stays",
      GROK_FRAME + row_at(3, 3) + "│ ❯ hi │".encode() + FRAME_END,
      GROK_FRAME + row_at(3, 3) + "│ ❯ hi │".encode() + FRAME_END),
@@ -835,7 +843,10 @@ def run_grok_cases():
                          ("the box's right side", SIDE + "▕".encode() + row_at(5, 3)),
                          ("typed text in the pool's spring green", row_at(86, 7) + TYPED + b"B"),
                          ("the mark on the band is the white sent mark", SENT_MARK_ON_BAND + E + b"[0;" + WINE + b"m " + BAND_TEXT + b"Bana"),
-                         ("the input box's mark white", row_at(86, 5) + INPUT_MARK_WHITE)):
+                         ("the input box's mark white", row_at(86, 5) + INPUT_MARK_WHITE),
+                         ("a notice in the faint grey", FAINT + b"Worked"),
+                         ("a key hint in the faint grey", FAINT + b":send"),
+                         ("the input box's hint in the faint grey, slanted", FAINT_SLANTED + b"#")):
         failures += check(f"grok band recording: {what}", needle in whole)
     failures += check("grok band recording: Grok's characters all kept", all(
         stream.count(c.encode()) <= whole.count(c.encode()) for c in "❯│╭╰─"))

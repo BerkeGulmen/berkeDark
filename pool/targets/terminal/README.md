@@ -109,6 +109,8 @@ When the program is named `grok` (Grok itself, or the berkeDark-grok wrapper), o
   `TERM` stays as it is. (Not in compact mode, where Grok drops the `❯`.)
 - What you type in Grok's input box (inside its frame, after its `❯`) takes `@{chat.user.input.text}`; the hint
   stays as Grok draws it, and the `❯` stays, in `@{chat.user.input.mark}`.
+- Secondary text Grok draws dim in the text colour (notices such as "Worked for", status and key hints, the hint
+  in the input box) takes the faint grey `@{base.faint}`, as under Claude Code; slanted text stays slanted.
 - The diff of an edit (all red or all green rows under a tool's `◆` row) stands on `@{bg:diff.removed}` and
   `@{bg:diff.added}`, its line numbers `@{diff.gutter}`.
 - Text: a heading of level 1 `@{prose.heading.1}`, heading lines `@{prose.heading.line}`, inline code `@{prose.code.inline}`,

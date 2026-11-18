@@ -175,3 +175,10 @@
 #define DIFF_ADDED_TEXT_COLOUR "@{ansi.green}"          /* @{ansi.green|#}: an added row's text, as Claude Code's diff blocks */
 #define LINK_TEXT_COLOUR "@{prose.link.text}"           /* @{prose.link.text|#}, underlined: a link's words (Grok marks them) */
 #define EDIT_GUTTER_COLOUR "@{diff.gutter}"             /* @{diff.gutter|#}: the line numbers of an edit's diff */
+/*
+ * Grok draws its secondary text dim in the terminal's text colour (SGR 2), a faint cream: its notices ("Worked
+ * for"), the status and key hints, the hint in its input box, the quote bar. One look for all of them, so one
+ * class: the pool's faint grey, as Claude Code's notices, hints and thinking text (all the same grey). The slant
+ * Grok gives a run stays (2026-11-18).
+ */
+#define FAINT_COLOUR "@{base.faint}"                    /* @{base.faint|#} */

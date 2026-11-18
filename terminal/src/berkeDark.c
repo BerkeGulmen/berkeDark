@@ -132,6 +132,7 @@ enum {
     PAINT_BOX_RIGHT,
     PAINT_BAND_MARK,         /* Grok's mark on its band: the sent mark, in its place (the author, 2026-11-18) */
     PAINT_INPUT_MARK,        /* Grok's mark in its input box, white */
+    PAINT_FAINT,             /* Grok's dim secondary text: notices, hints, the input box's hint */
     PAINT_KINDS
 };
 _Static_assert(PAINT_KINDS <= (GLYPH_PAINT >> PAINT_SHIFT) + 1, "a paint kind must fit in the glyph map");
@@ -2298,6 +2299,7 @@ static const char *paint_colour(int kind)
     case PAINT_BOX_RIGHT: return BOX_LINE_COLOUR;
     case PAINT_BAND_MARK: return SENT_MARK_COLOUR;
     case PAINT_INPUT_MARK: return PROMPT_MARK_COLOUR;
+    case PAINT_FAINT: return FAINT_COLOUR;
     default: return NULL;
     }
 }
@@ -2509,6 +2511,10 @@ static void settle_reply(struct interpreter *in)
  * The input box: rows inside Grok's frame ("╭" above, "│" first) whose first row holds Grok's "❯". What the user
  * types there, in the terminal's text colour, takes the pool's typed text; the hint (dim, slanted) stays. The "❯"
  * stays, white like the input mark under Claude Code.
+ *
+ * Secondary text: Grok draws its notices, status and key hints, the hint in its input box and the quote bar dim in
+ * the terminal's text colour, a faint cream. Where nothing above gives such a cell a class, it takes the pool's
+ * faint grey, as under Claude Code; its slant stays.
  *
  * Blocks. Grok draws a block of code, a quote or a table without a frame; the row under it holds Grok's grey "◇"
  * and the block's kind ("python", "diff", "quote", "table"). The block reaches up to the first empty row, and on
@@ -2837,6 +2843,19 @@ static void want_grok_input(const struct screen *sc, int row, int text, unsigned
             want[column] = PAINT_INPUT_TEXT;
 }
 
+/*
+ * Grok's secondary text: a known character drawn dim in the terminal's text colour (SGR 2 and no colour), slanted
+ * or not. A palette colour (its grey 8 among them), a colour by value or a background is not this.
+ */
+static bool is_grok_faint(const struct screen *sc, int row, int column)
+{
+    unsigned char look = sc->looks[row][column];
+    unsigned glyph = sc->glyphs[row][column];
+
+    return (look & (LOOK_DIM | LOOK_COLOUR | LOOK_OTHER)) == LOOK_DIM && !is_gap(sc, row, column) &&
+           (glyph & GLYPH_JOINED) == 0 && (glyph & (GLYPH_CODE | GLYPH_TAIL)) != 0;
+}
+
 /* The box around the band, on its first and last cell: only where Grok left the cell empty. */
 static void want_grok_band_sides(const struct screen *sc, int row, int left, unsigned char *want)
 {
@@ -3007,6 +3026,9 @@ static void settle_grok(struct screen *sc)
         for (int column = 0; column < sc->columns; ++column)
             if (is_number_paint(paint_at(sc, row, column)) && want[column] == PAINT_NONE)
                 want[column] = (unsigned char)paint_at(sc, row, column); /* a number's own colour stays */
+        for (int column = 0; column < sc->columns; ++column)
+            if (want[column] == PAINT_NONE && is_grok_faint(sc, row, column))
+                want[column] = PAINT_FAINT;
         paint_cells(sc, row, want, &has_begun);
     }
     if (has_begun)
