@@ -4,6 +4,14 @@ All notable changes to the "berkeDark" extension will be documented in this file
 
 ## [Unreleased]
 
+### Fixed
+- Qwen Code: the theme names berkeDark's text colour; with an empty one Qwen Code's OpenTUI interface drew text in its own grey (`#cdd6f4`)
+- Terminal colour interpreter, outside Claude Code: text in exactly berkeDark's text colour counts as plain text (numbers, dates, styles)
+- Terminal colour interpreter, outside Claude Code: Qwen Code's own drawn cursor (a light grey cell) gives way to the terminal's cursor, or to an underline in the cursor's colour; a request for a block cursor is followed by the terminal's own cursor style
+
+### Added
+- `cli/qwen/reapply-diff-color-patch.py`: makes Qwen Code's ```diff blocks readable with a custom theme (to be run again after each Qwen Code update)
+
 ## [1.3.0] - 2026-11-10
 
 ### Added
