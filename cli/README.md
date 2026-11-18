@@ -85,17 +85,24 @@ is started, `TERM` included:
 
 - **Your messages on berkeDark's band.** Grok draws its band only in terminals it asks for their colours, and
   it does not ask foot, so there your messages were plain bold. The interpreter lays berkeDark's wine
-  (`#260307`) under each of your messages, with the empty row above and below, across the band's width. Where
-  Grok does draw its own band, it becomes the same wine.
+  (`#260307`) under each of your messages, with the empty row above and below, across the band's width;
+  numbers and times on it keep their colours. Where Grok does draw its own band, it becomes the same wine.
 - **Code and diffs in berkeDark's classes.** Grok gives its code palette colours in roles of its own (numbers
   red, keywords magenta, the added row of a diff cyan). In a block of code, recognised by the grey `◇` row with
-  its language under it, the interpreter gives them berkeDark's: keywords sky, names of functions blue,
-  parameters orange, types spring green, strings yellow, keys of JSON amber, numbers magenta, constants and
-  signs ice, comments grey and slanted; in a `diff` block the `+` spring green and the added text green, the
-  `-` rose.
+  its language under it and followed upward across empty lines while the rows are code, the interpreter gives
+  them berkeDark's: keywords sky, names of functions blue, parameters orange, types spring green, strings
+  yellow, keys of JSON amber, numbers magenta, constants and signs ice, comments grey and slanted; in a `diff`
+  block the `+` spring green and the added text green, the `-` rose.
+- **The diff of an edit** (shown under the tool's `◆` row, all red or all green) stands on berkeDark's diff
+  grounds, the line numbers grey.
+- **Text as in Claude Code:** a heading of level 1 yellow (bold, slanted, underlined), the other heading levels
+  (Grok draws levels 2 to 4 alike) flame, inline code lavender and paths in it gold, a link's words sky and
+  underlined, a link's address sky and a bare address turquoise, list marks red, task boxes `○` orange and `✓`
+  green, quotes light pink and slanted, tables in the table colours.
 
-Limits: a block of code is followed upward from its `◇` row to the first empty row, so the rows above an empty
-row inside a block keep Grok's colours; code Grok shows outside such blocks (a file it reads, the diff of an
-edit) was not measured and keeps them too.
+Limits: in compact mode (`[ui] compact_mode`) Grok leaves out the `❯` and draws your message exactly like a
+heading line, so it cannot be told apart and gets no band there. A file Grok reads is shown only as
+"Read <file>"; there is no code to colour. Measured with Grok 1.0.89; a later Grok that draws these
+differently keeps its own colours until berkeDark follows it.
 
 Tested with Qwen Code 0.27.1 and 0.28.0 (its Ink interface under Node and its OpenTUI interface under Bun), Codex 0.167.0 and Grok 1.0.89 (answered by a local stand-in endpoint, no account) on Void Linux in foot.

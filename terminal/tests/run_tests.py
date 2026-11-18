@@ -702,9 +702,10 @@ GROK_CASES = [
      + b"[38;5;8m" + "◇ diff".encode() + E + b"[39m" + FRAME_END + E + b"[?2026h" + E + b"7" + row_at(2, 3)
      + E + b"[0;38;2;255;92;124m-" + row_at(3, 3) + E + b"[0;38;2;63;255;127m+" + E + b"[0;38;2;169;236;118mnew" + E + b"8"
      + E + b"[?2026l"),
-    ("a bold row without the mark gets no band",
+    ("a bold row without the mark gets no band; it is a heading line",
      GROK_FRAME + row_at(3, 6) + E + b"[1mhi there" + E + b"[22m" + FRAME_END,
-     GROK_FRAME + row_at(3, 6) + E + b"[1mhi there" + E + b"[22m" + FRAME_END),
+     GROK_FRAME + row_at(3, 6) + E + b"[1mhi there" + E + b"[22m" + FRAME_END + E + b"[?2026h" + E + b"7" + row_at(3, 6)
+     + E + b"[0;1;38;2;255;95;7mhi" + row_at(3, 9) + b"there" + E + b"8" + E + b"[?2026l"),
     ("the input box's mark after its border gets no band",
      GROK_FRAME + row_at(3, 3) + "│ ".encode() + E + b"[1m" + "❯ hi".encode() + E + b"[22m" + FRAME_END,
      GROK_FRAME + row_at(3, 3) + "│ ".encode() + E + b"[1m" + "❯ hi".encode() + E + b"[22m" + FRAME_END),
@@ -712,7 +713,36 @@ GROK_CASES = [
      GROK_FRAME + row_at(2, 3) + E + b"[38;5;5mdef" + E + b"[39m" + FRAME_END,
      GROK_FRAME + row_at(2, 3) + E + b"[38;5;5mdef" + E + b"[39m" + FRAME_END),
 ]
+# On 8 x 40 screens: (name, given, what berkeDark adds after the program's bytes).
+GROK_CASES_8 = [
+    ("a number on the band keeps its colour",
+     GROK_FRAME + row_at(3, 6) + E + b"[1m" + "❯ pil 42 ".encode() + E + b"[22m" + FRAME_END,
+     None),
+    ("an empty line inside a block of code does not end it",
+     GROK_FRAME + row_at(2, 3) + E + b"[38;5;5mdef" + E + b"[39m" + row_at(4, 3) + E + b"[38;5;1m7" + E + b"[39m" + row_at(5, 3) + E
+     + b"[38;5;8m" + "◇ python".encode() + E + b"[39m" + FRAME_END,
+     E + b"[?2026h" + E + b"7" + row_at(2, 3) + E + b"[0;38;2;87;191;255mdef" + row_at(4, 3) + E + b"[0;38;2;255;0;255m7" + E + b"8"
+     + E + b"[?2026l"),
+    ("text above an empty line is not taken into the block",
+     GROK_FRAME + row_at(2, 3) + b"satir" + row_at(4, 3) + E + b"[38;5;1m7" + E + b"[39m" + row_at(5, 3) + E + b"[38;5;8m"
+     + "◇ python".encode() + E + b"[39m" + FRAME_END,
+     E + b"[?2026h" + E + b"7" + row_at(4, 3) + E + b"[0;38;2;255;0;255m7" + E + b"8" + E + b"[?2026l"),
+    ("an edit's diff stands on the diff grounds, its numbers grey",
+     GROK_FRAME + row_at(2, 3) + "◆ ".encode() + E + b"[1mEdit" + E + b"[22m " + E + b"[38;5;6mf.py" + E + b"[39m" + row_at(4, 6) + E
+     + b"[38;5;1m3  a = 1" + row_at(5, 6) + E + b"[38;5;2m3  a = 2" + E + b"[39m" + FRAME_END,
+     E + b"[?2026h" + E + b"7" + row_at(4, 6) + E + b"[0;38;2;110;115;128;48;2;40;26;45m3" + E + b"[0;31;48;2;40;26;45m  a = 1" + E
+     + b"[0;48;2;40;26;45m" + b" " * 25 + row_at(5, 6) + E + b"[0;38;2;110;115;128;48;2;29;42;43m3" + E
+     + b"[0;32;48;2;29;42;43m  a = 2" + E + b"[0;48;2;29;42;43m" + b" " * 25 + E + b"8" + E + b"[?2026l"),
+    ("a list mark, a task box, inline code and a link's address",
+     GROK_FRAME + row_at(2, 3) + "• ".encode() + E + b"[2m[ ]" + E + b"[22m is" + row_at(3, 3) + E + b"[1;38;5;6mrun" + E
+     + b"[0m ve (https://a.org)" + FRAME_END,
+     E + b"[?2026h" + E + b"7" + row_at(2, 3) + E + b"[0;38;2;255;0;0m" + "•".encode() + row_at(2, 5) + E + b"[0;2m  " + E
+     + b"[0;38;2;255;158;96m" + "○".encode() + row_at(3, 3) + E + b"[0;1;38;2;163;165;244mrun" + row_at(3, 11) + E
+     + b"[0;38;2;87;191;255mhttps://a.org" + E + b"8" + E + b"[?2026l"),
+]
 GROK_RECORDING = Path(__file__).resolve().parent / "recordings" / "grok-1.0.89-reply-90x150.bin.gz"
+GROK_RECORDING_2 = Path(__file__).resolve().parent / "recordings" / "grok-1.0.89-reply2-90x150.bin.gz"
+GROK_RECORDING_EDIT = Path(__file__).resolve().parent / "recordings" / "grok-1.0.89-edit-90x150.bin.gz"
 
 
 def run_grok_cases():
@@ -729,7 +759,17 @@ def run_grok_cases():
         if other != given:
             failures += 1
             print(f"FAIL {name} (as another program's): {other!r}")
-    print(f"grok: {len(GROK_CASES)} cases, each whole, byte by byte and as another program's, {failures} failed")
+    for name, given, added in GROK_CASES_8:
+        for chunk in ("65536", "1"):
+            got = subprocess.run([BINARY, "--filter", chunk, "8", "40", "grok"], input=given, capture_output=True).stdout
+            ok = got.startswith(given) and (added is None or got[len(given):] == added)
+            if name.startswith("a number on the band"):
+                ok = got.endswith(b"\x1b[0;1;38;2;255;0;255;48;2;38;3;7m42" + E + b"[0;48;2;38;3;7m" + b" " * 25 + row_at(4, 3) + E
+                                  + b"[0;48;2;38;3;7m" + b" " * 36 + E + b"8" + E + b"[?2026l")
+            if not ok:
+                failures += 1
+                print(f"FAIL {name} (chunk {chunk}):\n got  {got!r}")
+    print(f"grok: {len(GROK_CASES) + len(GROK_CASES_8)} cases, each whole, byte by byte (and as another program's), {failures} failed")
     # A real recording: Grok's reply to the look sample, from a local stand-in endpoint.
     stream = gzip.decompress(GROK_RECORDING.read_bytes())
     whole = subprocess.run([BINARY, "--filter", "65536", "90", "150", "grok"], input=stream, capture_output=True).stdout
@@ -740,6 +780,22 @@ def run_grok_cases():
                          ("JSON key", b"38;2;255;191;31mad"), ("string", b"38;2;255;255;0mdeneme"), ("type", b"38;2;63;255;127mfloat"),
                          ("added mark", b"38;2;63;255;127m+"), ("removed mark", b"38;2;255;92;124m-")):
         failures += check(f"grok recording: {what} in the pool's colour", needle in whole)
+    stream = gzip.decompress(GROK_RECORDING_2.read_bytes())
+    whole = subprocess.run([BINARY, "--filter", "65536", "90", "150", "grok"], input=stream, capture_output=True).stdout
+    bytewise = subprocess.run([BINARY, "--filter", "7", "90", "150", "grok"], input=stream, capture_output=True).stdout
+    failures += check("grok recording 2: the same in pieces of 7 bytes", whole == bytewise)
+    for what, needle in (("heading 1", b"1;3;4;38;2;255;255;0m"), ("heading line", b"1;38;2;255;95;7m"), ("inline code", b"1;38;2;163;165;244m"),
+                         ("path", b"1;38;2;255;210;91m"), ("link words", b"4;38;2;87;191;255m"), ("link address", b"38;2;87;191;255mhttps"),
+                         ("bare address", b"38;2;111;220;240mhttps"), ("quote", b"3;38;2;245;194;231m"), ("list mark", b"38;2;255;0;0m"),
+                         ("open task", "38;2;255;158;96m○".encode()), ("done task", "38;2;169;236;118m✓".encode()),
+                         ("comment after an empty line in a block", b"3;38;2;112;112;112m#"),
+                         ("number on the band", b"38;2;255;0;255;48;2;38;3;7m2")):
+        failures += check(f"grok recording 2: {what}", needle in whole)
+    stream = gzip.decompress(GROK_RECORDING_EDIT.read_bytes())
+    whole = subprocess.run([BINARY, "--filter", "65536", "90", "150", "grok"], input=stream, capture_output=True).stdout
+    failures += check("grok edit recording: removed row on the removed ground", b"31;48;2;40;26;45m" in whole)
+    failures += check("grok edit recording: added row on the added ground", b"32;48;2;29;42;43m" in whole)
+    failures += check("grok edit recording: a number in the text is no line number", b"32;48;2;29;42;43m    pi = 3.141592653" in whole)
     return failures
 
 

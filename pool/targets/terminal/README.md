@@ -102,10 +102,17 @@ For programs other than Claude Code (made for Qwen Code, 2026-11-18):
 When the program is named `grok` (Grok itself, or the berkeDark-grok wrapper), on its full screen:
 
 - Your messages (a row that starts with a bold `❯` and its further bold rows) stand on `@{bg:chat.user.message}`,
-  with the empty row above and below, across the band's width: Grok draws no band in foot, which it does not ask
-  for its colours. `TERM` stays as it is.
-- In a block of code (the rows above Grok's grey `◇` row with the language) Grok's palette roles take the pool's
-  classes: keywords `@{code.keyword}`, names of functions `@{code.function.definition}`, parameters `@{code.parameter}`,
+  with the empty row above and below, across the band's width; numbers and dates on it keep their colours. Grok
+  draws no band in foot, which it does not ask for its colours. `TERM` stays as it is. (Not in compact mode, where
+  Grok drops the `❯`.)
+- The diff of an edit (all red or all green rows under a tool's `◆` row) stands on `@{bg:diff.removed}` and
+  `@{bg:diff.added}`, its line numbers `@{diff.gutter}`.
+- Text: a heading of level 1 `@{prose.heading.1}`, heading lines `@{prose.heading.line}`, inline code `@{prose.code.inline}`,
+  paths `@{prose.path}`, a link's words `@{prose.link.text}`, addresses `@{prose.link.url}` and `@{prose.link.bare}`, list marks
+  `@{prose.list.bullet}`, task marks `@{prose.task.open}` and `@{prose.task.done}`, quotes `@{prose.quote.text}`, tables `@{prose.table.border}`
+  and `@{prose.table.header}`.
+- In a block of code (the rows above Grok's grey `◇` row with the language, across empty lines while the rows are
+  code) Grok's palette roles take the pool's classes: keywords `@{code.keyword}`, names of functions `@{code.function.definition}`, parameters `@{code.parameter}`,
   types `@{code.type}`, strings `@{code.string}`, keys `@{code.property.key}`, numbers `@{code.number}`, constants
   `@{code.constant.language}`, signs `@{code.punctuation}`, comments `@{code.comment}`; in a `diff` block the `+`
   `@{diff.added.mark}`, the added text `@{ansi.green}`, the `-` `@{diff.removed.mark}`.

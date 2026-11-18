@@ -165,3 +165,5 @@
 #define DIFF_ADDED_MARK_COLOUR "63;255;127"     /* #3fff7f: the + of an added row */
 #define DIFF_REMOVED_MARK_COLOUR "255;92;124" /* #ff5c7c: the - of a removed row */
 #define DIFF_ADDED_TEXT_COLOUR "169;236;118"          /* #a9ec76: an added row's text, as Claude Code's diff blocks */
+#define LINK_TEXT_COLOUR "87;191;255"           /* #57bfff, underlined: a link's words (Grok marks them) */
+#define EDIT_GUTTER_COLOUR "110;115;128"             /* #6e7380: the line numbers of an edit's diff */

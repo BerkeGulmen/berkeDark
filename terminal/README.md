@@ -102,10 +102,17 @@ For programs other than Claude Code (made for Qwen Code, 2026-11-18):
 When the program is named `grok` (Grok itself, or the berkeDark-grok wrapper), on its full screen:
 
 - Your messages (a row that starts with a bold `❯` and its further bold rows) stand on `#260307`,
-  with the empty row above and below, across the band's width: Grok draws no band in foot, which it does not ask
-  for its colours. `TERM` stays as it is.
-- In a block of code (the rows above Grok's grey `◇` row with the language) Grok's palette roles take the pool's
-  classes: keywords `#57bfff`, names of functions `#3f7fff`, parameters `#ff9e60`,
+  with the empty row above and below, across the band's width; numbers and dates on it keep their colours. Grok
+  draws no band in foot, which it does not ask for its colours. `TERM` stays as it is. (Not in compact mode, where
+  Grok drops the `❯`.)
+- The diff of an edit (all red or all green rows under a tool's `◆` row) stands on `#281a2d` and
+  `#1d2a2b`, its line numbers `#6e7380`.
+- Text: a heading of level 1 `#ffff00`, heading lines `#ff5f07`, inline code `#a3a5f5`,
+  paths `#ffd25c`, a link's words `#57bfff`, addresses `#57bfff` and `#6fdcf0`, list marks
+  `#ff0000`, task marks `#ff9e60` and `#a9ec76`, quotes `#f5c2e7`, tables `#6e7380`
+  and `#b2d9ff`.
+- In a block of code (the rows above Grok's grey `◇` row with the language, across empty lines while the rows are
+  code) Grok's palette roles take the pool's classes: keywords `#57bfff`, names of functions `#3f7fff`, parameters `#ff9e60`,
   types `#3fff7f`, strings `#ffff00`, keys `#ffbf1f`, numbers `#ff00ff`, constants
   `#b2d9ff`, signs `#b2d9ff`, comments `#707070`; in a `diff` block the `+`
   `#3fff7f`, the added text `#a9ec76`, the `-` `#ff5c7c`.

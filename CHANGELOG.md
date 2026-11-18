@@ -7,7 +7,7 @@ All notable changes to the "berkeDark" extension will be documented in this file
 ### Fixed
 - Qwen Code: the theme names berkeDark's text colour; with an empty one Qwen Code's OpenTUI interface drew text in its own grey (`#cdd6f4`)
 - Terminal colour interpreter, outside Claude Code: text in exactly berkeDark's text colour counts as plain text (numbers, dates, styles)
-- Terminal colour interpreter, under Grok: the user's messages stand on berkeDark's band (Grok draws none in foot), and Grok's code and diff blocks take the pool's classes (numbers magenta, keywords sky, the added row green); `TERM` stays as it is
+- Terminal colour interpreter, under Grok: the user's messages stand on berkeDark's band (Grok draws none in foot), numbers and dates on it keep their colours; Grok's code and diff blocks take the pool's classes (numbers magenta, keywords sky, the added row green), also across empty lines; the diff of an edit stands on the diff grounds; headings, inline code, paths, links, addresses, list marks, task boxes, quotes and tables take the pool's classes as in Claude Code; `TERM` stays as it is
 - Terminal colour interpreter, outside Claude Code: Qwen Code's selection (white on `#264f78`, not themable) takes berkeDark's selection ground; Grok's band behind the user's messages takes berkeDark's band (`#260307`)
 - Terminal colour interpreter, outside Claude Code: Qwen Code's own drawn cursor (a light grey cell) gives way to the terminal's cursor, or to an underline in the cursor's colour; a request for a block cursor is followed by the terminal's own cursor style
 

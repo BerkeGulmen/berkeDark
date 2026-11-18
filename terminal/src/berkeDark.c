@@ -57,6 +57,7 @@ enum {
     GLYPH_TAIL = 1 << 28,              /* the second cell of a wide character */
     GLYPH_JOINER = 1 << 29,            /* the character ends with a joiner (U+200D) so far: a picture after it joins it */
     GLYPH_APOSTROPHE = 1 << 30,        /* on a diff's row: drawn as plain text, inside a "string" that an apostrophe began */
+    GLYPH_UNDERLINE = 1u << 31,        /* under Grok: the cell is underlined (its look is kept as if it were not) */
 };
 
 /*
@@ -114,6 +115,15 @@ enum {
     PAINT_DIFF_ADDED_MARK,   /* Grok's diff blocks */
     PAINT_DIFF_REMOVED_MARK,
     PAINT_DIFF_ADDED_TEXT,
+    PAINT_BAND_NUMBER,       /* a number on Grok's band */
+    PAINT_BAND_DATE,
+    PAINT_HEADING_1,         /* Grok's heading of level 1 */
+    PAINT_LINK_TEXT,         /* Grok's link words */
+    PAINT_QUOTE_TEXT,        /* Grok's quotes */
+    PAINT_EDIT_ADDED,        /* the diff of an edit in Grok: the program's look on the diff's ground */
+    PAINT_EDIT_REMOVED,
+    PAINT_EDIT_GUTTER_ADDED, /* its line numbers */
+    PAINT_EDIT_GUTTER_REMOVED,
 };
 
 enum { NO_EDGE, TOP_EDGE, BOTTOM_EDGE, STALE_EDGE };
@@ -902,9 +912,11 @@ static void print_code_point(struct interpreter *in, unsigned code_point)
     unsigned char look = 0;
 
     bool is_palette_by_number = s->foreground == 38 && s->palette_index >= 0 && s->palette_index < 16 && !s->is_body;
+    /* Under Grok an underline (a heading, a link's words) is kept beside the look, so the cell can be written again. */
+    bool keeps_underline = s->underline && sc->is_grok;
 
-    if (s->background || s->underline || s->strike || s->reverse || (s->foreground == 38 && !s->is_body && !is_palette_by_number) ||
-        s->tint != NULL) {
+    if (s->background || (s->underline && !keeps_underline) || s->strike || s->reverse ||
+        (s->foreground == 38 && !s->is_body && !is_palette_by_number) || s->tint != NULL) {
         look = LOOK_OTHER | (s->is_body ? LOOK_BODY : 0); /* the body mark only tells a cell written again its colour */
     } else {
         if (s->is_body)
@@ -926,7 +938,8 @@ static void print_code_point(struct interpreter *in, unsigned code_point)
         set_cell(sc, sc->row, sc->column, flags);
         sc->looks[sc->row][sc->column] = look;
         sc->glyphs[sc->row][sc->column] = (i > 0 ? (unsigned)GLYPH_TAIL : is_known ? code_point : 0) |
-                                          (s->is_apostrophe ? (unsigned)GLYPH_APOSTROPHE : 0);
+                                          (s->is_apostrophe ? (unsigned)GLYPH_APOSTROPHE : 0) |
+                                          (keeps_underline && look != LOOK_OTHER ? (unsigned)GLYPH_UNDERLINE : 0);
         sc->text[sc->row][sc->column++] = !is_word_character ? 0 : code_point < 0x80 ? (unsigned char)code_point : 0x80;
     }
     if (s->is_soft_cursor)
@@ -1281,7 +1294,7 @@ static bool is_tool_word(const char *text, int length)
 
 static bool is_number_paint(int kind)
 {
-    return kind == PAINT_NUMBER || kind == PAINT_DATE;
+    return kind == PAINT_NUMBER || kind == PAINT_DATE || kind == PAINT_BAND_NUMBER || kind == PAINT_BAND_DATE;
 }
 
 /*
@@ -2260,13 +2273,36 @@ static const char *paint_colour(int kind)
     case PAINT_DIFF_ADDED_MARK: return DIFF_ADDED_MARK_COLOUR;
     case PAINT_DIFF_REMOVED_MARK: return DIFF_REMOVED_MARK_COLOUR;
     case PAINT_DIFF_ADDED_TEXT: return DIFF_ADDED_TEXT_COLOUR;
+    case PAINT_BAND_NUMBER: return REPLY_NUMBER_COLOUR;
+    case PAINT_BAND_DATE: return REPLY_DATE_COLOUR;
+    case PAINT_HEADING_1: return HEADING_COLOUR;
+    case PAINT_LINK_TEXT: return LINK_TEXT_COLOUR;
+    case PAINT_QUOTE_TEXT: return QUOTE_TEXT_COLOUR;
+    case PAINT_EDIT_GUTTER_ADDED:
+    case PAINT_EDIT_GUTTER_REMOVED: return EDIT_GUTTER_COLOUR;
     default: return NULL;
     }
 }
 
 /* A style in one number: the paint kind, the marks, and the program's palette colour when the kind keeps it. */
 enum { STYLE_KIND = 0x3f, STYLE_BOLD = 0x100, STYLE_DIM = 0x200, STYLE_ITALIC = 0x400, STYLE_PALETTE = 0x800, STYLE_INDEX_SHIFT = 12,
-       STYLE_BAND = 0x10000 };
+       STYLE_UNDERLINE = 0x10000, STYLE_GROUND_SHIFT = 17, STYLE_GROUND = 3 << 17 };
+enum { GROUND_NONE, GROUND_BAND, GROUND_ADDED, GROUND_REMOVED };
+
+/* The ground a paint kind lays under the cell. */
+static unsigned paint_ground(int kind)
+{
+    switch (kind) {
+    case PAINT_BAND:
+    case PAINT_BAND_NUMBER:
+    case PAINT_BAND_DATE: return GROUND_BAND;
+    case PAINT_EDIT_ADDED:
+    case PAINT_EDIT_GUTTER_ADDED: return GROUND_ADDED;
+    case PAINT_EDIT_REMOVED:
+    case PAINT_EDIT_GUTTER_REMOVED: return GROUND_REMOVED;
+    default: return GROUND_NONE;
+    }
+}
 
 /*
  * The style a paint kind gives a cell. A kind with a colour keeps the cell's bold and italic, drops its dim
@@ -2279,9 +2315,16 @@ static unsigned paint_style(const struct screen *sc, int row, int column, int ki
 
     if ((look & LOOK_ITALIC) != 0)
         style |= STYLE_ITALIC;
+    if ((sc->glyphs[row][column] & GLYPH_UNDERLINE) != 0)
+        style |= STYLE_UNDERLINE;
+    style |= paint_ground(kind) << STYLE_GROUND_SHIFT;
     if (paint_colour(kind) != NULL) {
         if (kind == PAINT_TABLE_HEADER)
             style |= STYLE_BOLD;
+        if (kind == PAINT_HEADING_1)
+            style |= STYLE_BOLD | STYLE_ITALIC | STYLE_UNDERLINE;
+        if (kind == PAINT_QUOTE_TEXT)
+            style |= STYLE_ITALIC;
         if (kind == PAINT_CODE_COMMENT || kind == PAINT_CODE_DECORATOR || kind == PAINT_COMMAND_OPTION ||
             kind == PAINT_CODE_PARAMETER)
             style |= STYLE_ITALIC;
@@ -2291,8 +2334,6 @@ static unsigned paint_style(const struct screen *sc, int row, int column, int ki
         style |= STYLE_DIM;
     if ((look & LOOK_COLOUR) != 0)
         style |= STYLE_PALETTE | (unsigned)(look & LOOK_INDEX) << STYLE_INDEX_SHIFT;
-    if (kind == PAINT_BAND)
-        style |= STYLE_BAND;
     return style;
 }
 
@@ -2305,15 +2346,18 @@ static void put_style(unsigned style)
                          : kind == PAINT_PATH ? PATH_BOLD_COLOUR
                          : paint_colour(kind);
     int index = (int)(style >> STYLE_INDEX_SHIFT & 0xf);
-    int length = snprintf(text, sizeof text, "\033[0%s%s%s", (style & STYLE_BOLD) != 0 ? ";1" : "",
-                          (style & STYLE_DIM) != 0 ? ";2" : "", (style & STYLE_ITALIC) != 0 ? ";3" : "");
+    int length = snprintf(text, sizeof text, "\033[0%s%s%s%s", (style & STYLE_BOLD) != 0 ? ";1" : "",
+                          (style & STYLE_DIM) != 0 ? ";2" : "", (style & STYLE_ITALIC) != 0 ? ";3" : "",
+                          (style & STYLE_UNDERLINE) != 0 ? ";4" : "");
+    unsigned ground = (style & STYLE_GROUND) >> STYLE_GROUND_SHIFT;
 
     if (colour != NULL)
         length += snprintf(text + length, sizeof text - (size_t)length, ";38;2;%s", colour);
     else if ((style & STYLE_PALETTE) != 0)
         length += snprintf(text + length, sizeof text - (size_t)length, ";%d", index < 8 ? 30 + index : 82 + index);
-    if ((style & STYLE_BAND) != 0)
-        length += snprintf(text + length, sizeof text - (size_t)length, ";" BAND_BACKGROUND);
+    if (ground != GROUND_NONE)
+        length += snprintf(text + length, sizeof text - (size_t)length, ";%s",
+                           ground == GROUND_BAND ? BAND_BACKGROUND : ground == GROUND_ADDED ? DIFF_ADDED_GROUND : DIFF_REMOVED_GROUND);
     text[length++] = 'm';
     put(text, (size_t)length);
 }
@@ -2422,17 +2466,30 @@ static void settle_reply(struct interpreter *in)
 }
 
 /*
- * Grok (2026-11-18, measured on Grok 1.0.89 with its terminal theme). In foot Grok draws the user's messages bold
- * on the terminal's canvas: Grok draws its band only in terminals it asks for their colours, and it does not ask
- * foot. A user's message is a row whose text starts with Grok's mark, a bold "❯" in the text colour, then a blank
- * and bold text; its further rows start bold under that text. berkeDark lays the band of its pool under them,
- * with the empty row above and below, across the width the band takes (the mark's column less three, at both
- * edges), keeping every character in the program's own look.
+ * Grok (2026-11-18, measured on Grok 1.0.89 with its terminal theme). Grok cannot be told any of this, so berkeDark
+ * does it when Grok runs inside it, at the end of each frame, keeping every character as Grok wrote it.
  *
- * A block of code is drawn without a frame; the row under it holds Grok's grey "◇" and the block's language. The
- * rows right above that row, up to an empty row, are the block's. Their palette colours get the pool's classes.
+ * The user's messages. In foot Grok draws them bold on the terminal's canvas: it draws its band only in terminals
+ * it asks for their colours, and it does not ask foot. A message is a row whose text starts with Grok's mark, a bold
+ * "❯" in the text colour, then a blank and bold text; its further rows start bold under that text. berkeDark lays
+ * the band of its pool under them, with the empty row above and below, across the width the band takes (the mark's
+ * column less three, at both edges). Numbers and dates on it keep their colours.
+ *
+ * Blocks. Grok draws a block of code, a quote or a table without a frame; the row under it holds Grok's grey "◇"
+ * and the block's kind ("python", "diff", "quote", "table"). The block reaches up to the first empty row, and on
+ * past empty rows while the rows above them are code (on every row a colour of Grok's code, nothing bold), so an
+ * empty line inside a block does not end it. Code takes the pool's classes for Grok's palette roles; a diff block
+ * its marks; a quote the quote's colour; a table the colours of a table.
+ *
+ * The diff of an edit: rows under a tool's "◆" row whose text is all one colour, red (removed) or green (added),
+ * starting with the line's number. They stand on the pool's diff grounds, the number grey.
+ *
+ * Text: a heading of level 1 (bold and underlined) and the heading lines (bold from end to end; Grok draws levels 2
+ * to 4 alike), inline code (bold cyan) and paths in it, a link's words (blue, underlined) and addresses, list marks,
+ * task boxes, as in Claude Code's replies.
  */
-enum { GROK_ROW_BAND = 1, GROK_ROW_CODE = 2, GROK_ROW_DIFF = 4 };
+enum { GROK_ROW_BAND = 1, GROK_ROW_CODE = 2, GROK_ROW_DIFF = 4, GROK_ROW_QUOTE = 8, GROK_ROW_TABLE = 16, GROK_ROW_EDIT = 32,
+       GROK_ROW_LABEL = 64 };
 
 static bool is_grok_text_cell(const struct screen *sc, int row, int column)
 {
@@ -2440,14 +2497,24 @@ static bool is_grok_text_cell(const struct screen *sc, int row, int column)
            (sc->looks[row][column] & (LOOK_COLOUR | LOOK_DIM | LOOK_OTHER)) == 0;
 }
 
-static bool is_grok_label_row(const struct screen *sc, int row, int *language)
+static bool is_grok_label_row(const struct screen *sc, int row, int *kind_column)
 {
     int start = first_text(sc, row, 0);
 
     if (start + 2 >= sc->columns || glyph_at(sc, row, start) != 0x25c7 || sc->looks[row][start] != (LOOK_COLOUR | 8))
         return false;
-    *language = start + 2;
+    *kind_column = start + 2;
     return true;
+}
+
+static bool is_word_at(const struct screen *sc, int row, int column, const char *word)
+{
+    int n = (int)strlen(word);
+
+    for (int i = 0; i < n; ++i)
+        if (column + i >= sc->columns || glyph_at(sc, row, column + i) != (unsigned char)word[i])
+            return false;
+    return column + n >= sc->columns || is_gap(sc, row, column + n);
 }
 
 static bool is_quote(unsigned glyph)
@@ -2458,6 +2525,31 @@ static bool is_quote(unsigned glyph)
 static bool is_code_word_glyph(unsigned glyph)
 {
     return glyph < 0x80 ? isalnum((int)glyph) || glyph == '_' : glyph > 0;
+}
+
+static bool is_grok_code_colour(unsigned char look)
+{
+    int index = look & LOOK_INDEX;
+
+    return (look & (LOOK_COLOUR | LOOK_OTHER)) == LOOK_COLOUR && (index == 1 || index == 3 || index == 4 || index == 5 || index == 6);
+}
+
+/* A row of code: some cell in a colour of Grok's code, no bold cell, not a label. */
+static bool is_grok_code_row(const struct screen *sc, int row)
+{
+    bool has_colour = false;
+    int kind_column;
+
+    if (is_blank_row(sc, row) || is_grok_label_row(sc, row, &kind_column))
+        return false;
+    for (int column = 0; column < sc->columns; ++column) {
+        if (is_gap(sc, row, column))
+            continue;
+        if ((sc->cells[row][column] & CELL_BOLD) != 0)
+            return false;
+        has_colour = has_colour || is_grok_code_colour(sc->looks[row][column]);
+    }
+    return has_colour;
 }
 
 /* The pool's class for a run of Grok's code drawn in one palette colour. */
@@ -2520,7 +2612,7 @@ static void want_grok_code(const struct screen *sc, int row, bool is_diff, unsig
         while (end < sc->columns && sc->looks[row][end] == look && !is_gap(sc, row, end) &&
                (!splits || is_code_word_glyph(glyph_at(sc, row, end)) == is_code_word_glyph(glyph_at(sc, row, column))))
             ++end;
-        int kind = grok_code_kind(sc, row, column, end, look & LOOK_INDEX, (look & LOOK_ITALIC) != 0);
+        int kind = grok_code_kind(sc, row, column, end, index, (look & LOOK_ITALIC) != 0);
 
         for (int i = column; i < end; ++i)
             want[i] = (unsigned char)kind;
@@ -2528,10 +2620,159 @@ static void want_grok_code(const struct screen *sc, int row, bool is_diff, unsig
     }
 }
 
+/* A row of an edit's diff: the line's number, then text, all in red or all in green. Returns 1 or 2, else 0. */
+static int grok_edit_colour(const struct screen *sc, int row)
+{
+    int start = first_text(sc, row, 0);
+    unsigned char look;
+
+    if (start >= sc->columns || !isdigit((int)glyph_at(sc, row, start)))
+        return 0;
+    look = sc->looks[row][start];
+    if (look != (LOOK_COLOUR | 1) && look != (LOOK_COLOUR | 2))
+        return 0;
+    for (int column = start; column < sc->columns; ++column)
+        if (!is_gap(sc, row, column) && sc->looks[row][column] != look)
+            return 0;
+    return look & LOOK_INDEX;
+}
+
+static bool is_grok_tool_row(const struct screen *sc, int row)
+{
+    int start = first_text(sc, row, 0);
+    unsigned glyph = start < sc->columns ? glyph_at(sc, row, start) : 0;
+
+    return glyph == 0x25c6 || glyph == 0x25c8;
+}
+
+/* Numbers and dates in a row's words, as the interpreter paints them in plain text, in the kinds given. */
+static void want_grok_numbers(const struct screen *sc, int row, int number_kind, int date_kind, unsigned char *want)
+{
+    for (int from = 0; from < sc->columns;) {
+        if (sc->text[row][from] == 0) {
+            ++from;
+            continue;
+        }
+        int to = from, first = 0, past = 0;
+        bool is_date = false;
+
+        while (to < sc->columns && sc->text[row][to] != 0)
+            ++to;
+        if (find_word_number(sc, row, from, to, &first, &past, &is_date))
+            for (int column = first; column < past; ++column)
+                want[column] = (unsigned char)(is_date ? date_kind : number_kind);
+        from = to;
+    }
+}
+
+/* Text outside blocks: headings, inline code, links and addresses, list marks and task boxes. */
+static void want_grok_text(const struct screen *sc, int row, unsigned char *want)
+{
+    int start = first_text(sc, row, 0), last_bold = -1, columns = sc->columns, gap = 0;
+    bool is_heading = start < columns, is_underlined = true, in_trailer = false;
+
+    for (int column = start; column < columns; ++column) {
+        if (is_gap(sc, row, column)) {
+            ++gap;
+            continue;
+        }
+        unsigned char look = sc->looks[row][column];
+        bool is_bold = (sc->cells[row][column] & CELL_BOLD) != 0;
+
+        if (is_bold && (look & (LOOK_COLOUR | LOOK_DIM | LOOK_OTHER)) == 0 && !in_trailer) {
+            last_bold = column;
+            is_underlined = is_underlined && (sc->glyphs[row][column] & GLYPH_UNDERLINE) != 0;
+        } else if (!is_bold && last_bold >= 0 && (in_trailer || gap >= 4)) {
+            in_trailer = true; /* the message's time at the row's end, far from the heading */
+        } else {
+            is_heading = false;
+        }
+        gap = 0;
+    }
+    if (is_heading && last_bold >= 0) {
+        for (int column = start; column <= last_bold; ++column)
+            if (!is_gap(sc, row, column))
+                want[column] = is_underlined ? PAINT_HEADING_1 : PAINT_HEADING_LINE;
+        return;
+    }
+
+    int text = start;
+    unsigned mark = start < columns ? glyph_at(sc, row, start) : 0;
+
+    if (mark == 0x2022 && is_light(sc, row, start) && start + 2 < columns && is_gap(sc, row, start + 1)) {
+        want[start] = PAINT_LIST_MARK;
+        text = start + 2;
+        if (text + 3 < columns && glyph_at(sc, row, text) == '[' && glyph_at(sc, row, text + 2) == ']' && is_gap(sc, row, text + 3)) {
+            bool is_done = glyph_at(sc, row, text + 1) == 'x' && sc->looks[row][text + 1] == (LOOK_COLOUR | 2);
+            bool is_open = glyph_at(sc, row, text + 1) == ' ' || is_gap(sc, row, text + 1);
+
+            if (is_done || is_open) {
+                want[text] = PAINT_HIDDEN;
+                want[text + 1] = PAINT_HIDDEN;
+                want[text + 2] = is_done ? PAINT_TASK_DONE : PAINT_TASK_OPEN;
+                text += 4;
+            }
+        }
+    } else {
+        int digits = start;
+
+        while (digits < columns && digits - start < 3 && isdigit(sc->text[row][digits]) && is_light(sc, row, digits))
+            ++digits;
+        if (digits > start && digits + 1 < columns && sc->text[row][digits] == '.' && is_gap(sc, row, digits + 1))
+            for (int column = start; column <= digits; ++column)
+                want[column] = PAINT_LIST_MARK;
+    }
+
+    for (int column = text; column < columns;) {
+        unsigned char look = sc->looks[row][column];
+        bool is_code = look == (LOOK_COLOUR | 6) && (sc->cells[row][column] & CELL_BOLD) != 0;
+        bool is_link = look == (LOOK_COLOUR | 4) && (sc->glyphs[row][column] & GLYPH_UNDERLINE) != 0;
+
+        if (is_gap(sc, row, column) || (!is_code && !is_link)) {
+            ++column;
+            continue;
+        }
+        int end = column;
+
+        while (end < columns && sc->looks[row][end] == look &&
+               ((sc->cells[row][end] & CELL_BOLD) != 0) == ((sc->cells[row][column] & CELL_BOLD) != 0))
+            ++end;
+        char t[64];
+        int n = read_cells(sc, row, column, end, t, sizeof t);
+        int kind = is_link ? PAINT_LINK_TEXT : n > 0 && memchr(t, ' ', (size_t)n) == NULL && is_path_text(t, n) ? PAINT_PATH : PAINT_CODE_INLINE;
+
+        for (int i = column; i < end; ++i)
+            if (!is_gap(sc, row, i))
+                want[i] = (unsigned char)kind;
+        column = end;
+    }
+    for (int from = text; from < columns;) {
+        if (sc->text[row][from] == 0) {
+            ++from;
+            continue;
+        }
+        int to = from, first = 0, past = 0;
+        bool is_free = true;
+
+        while (to < columns && sc->text[row][to] != 0) {
+            is_free = is_free && want[to] == PAINT_NONE && is_light(sc, row, to);
+            ++to;
+        }
+        if (is_free && find_address(&sc->text[row][from], to - from, &first, &past)) {
+            bool is_link = from > text && first == 1 && sc->text[row][from] == '(' && from + past < to && sc->text[row][from + past] == ')';
+
+            for (int column = from + first; column < from + past; ++column)
+                want[column] = is_link ? PAINT_LINK_URL : PAINT_LINK_BARE;
+        }
+        from = to;
+    }
+}
+
 static void settle_grok(struct screen *sc)
 {
     static unsigned char facts[MAX_ROWS], left_of[MAX_ROWS], want[MAX_COLUMNS];
     bool has_begun = false;
+    int kind_column;
 
     if (!sc->is_grok || !sc->is_dirty || sc->has_saved_cursor || sc->is_insert || sc->is_origin)
         return;
@@ -2539,7 +2780,7 @@ static void settle_grok(struct screen *sc)
     memset(facts, 0, sizeof facts);
 
     for (int row = 0; row < sc->rows; ++row) {
-        int start = first_text(sc, row, 0), language;
+        int start = first_text(sc, row, 0);
 
         if (start + 2 < sc->columns && glyph_at(sc, row, start) == 0x276f && is_grok_text_cell(sc, row, start) &&
             is_gap(sc, row, start + 1) && is_grok_text_cell(sc, row, start + 2)) {
@@ -2554,14 +2795,51 @@ static void settle_grok(struct screen *sc)
                 left_of[r] = (unsigned char)(left < 255 ? left : 255);
             }
             row = last;
-        } else if (is_grok_label_row(sc, row, &language)) {
-            bool is_diff = language + 4 <= sc->columns && glyph_at(sc, row, language) == 'd' &&
-                           glyph_at(sc, row, language + 1) == 'i' && glyph_at(sc, row, language + 2) == 'f' &&
-                           glyph_at(sc, row, language + 3) == 'f' && is_gap(sc, row, language + 4);
+        } else if (is_grok_label_row(sc, row, &kind_column)) {
+            bool is_quote_block = is_word_at(sc, row, kind_column, "quote");
+            bool is_table = is_word_at(sc, row, kind_column, "table");
+            unsigned char kind = is_quote_block ? GROK_ROW_QUOTE : is_table ? GROK_ROW_TABLE
+                                 : (unsigned char)(GROK_ROW_CODE | (is_word_at(sc, row, kind_column, "diff") ? GROK_ROW_DIFF : 0));
+            int r = row - 1;
 
-            for (int r = row - 1; r >= 0 && !is_blank_row(sc, r) && facts[r] == 0; --r)
-                facts[r] |= GROK_ROW_CODE | (is_diff ? GROK_ROW_DIFF : 0);
+            facts[row] |= GROK_ROW_LABEL;
+            for (;;) {
+                while (r >= 0 && !is_blank_row(sc, r) && facts[r] == 0)
+                    facts[r--] |= kind;
+                /* An empty line inside a block of code: the block goes on while the rows above it are code. */
+                int above = r;
+
+                while (above >= 0 && is_blank_row(sc, above))
+                    --above;
+                if ((kind & GROK_ROW_CODE) == 0 || above < 0 || above == r || facts[above] != 0 || !is_grok_code_row(sc, above))
+                    break;
+                int top = above;
+
+                while (top - 1 >= 0 && !is_blank_row(sc, top - 1) && facts[top - 1] == 0)
+                    --top;
+                bool all_code = true;
+
+                for (int k = top; k <= above; ++k)
+                    all_code = all_code && is_grok_code_row(sc, k);
+                if (!all_code)
+                    break;
+                r = above;
+            }
         }
+    }
+    for (int row = 0; row < sc->rows; ++row) { /* an edit's diff, under its tool row */
+        int colour = grok_edit_colour(sc, row);
+
+        if (colour == 0 || facts[row] != 0)
+            continue;
+        int up = row - 1;
+
+        while (up >= 0 && grok_edit_colour(sc, up) != 0)
+            --up;
+        if (up >= 0 && is_blank_row(sc, up))
+            --up;
+        if (up >= 0 && is_grok_tool_row(sc, up))
+            facts[row] |= GROK_ROW_EDIT;
     }
     for (int row = 0; row < sc->rows; ++row) {
         memset(want, PAINT_NONE, (size_t)sc->columns);
@@ -2571,8 +2849,43 @@ static void settle_grok(struct screen *sc)
             for (int column = left; column < sc->columns - left; ++column)
                 if ((sc->looks[row][column] & LOOK_OTHER) == 0)
                     want[column] = PAINT_BAND;
+            want_grok_numbers(sc, row, PAINT_BAND_NUMBER, PAINT_BAND_DATE, want);
         } else if ((facts[row] & GROK_ROW_CODE) != 0) {
             want_grok_code(sc, row, (facts[row] & GROK_ROW_DIFF) != 0, want);
+        } else if ((facts[row] & GROK_ROW_QUOTE) != 0) {
+            int start = first_text(sc, row, 0);
+
+            for (int column = start + 1; column < sc->columns; ++column)
+                if (!is_gap(sc, row, column) && is_light(sc, row, column))
+                    want[column] = PAINT_QUOTE_TEXT;
+        } else if ((facts[row] & GROK_ROW_TABLE) != 0) {
+            bool is_header = row > 0 && (facts[row - 1] & GROK_ROW_TABLE) != 0 && (row < 2 || (facts[row - 2] & GROK_ROW_TABLE) == 0);
+
+            for (int column = 0; column < sc->columns; ++column) {
+                if (is_gap(sc, row, column))
+                    continue;
+                if (is_line_glyph(glyph_at(sc, row, column)))
+                    want[column] = PAINT_TABLE_BORDER;
+                else if (is_header && (sc->cells[row][column] & CELL_BOLD) != 0)
+                    want[column] = PAINT_TABLE_HEADER;
+            }
+        } else if ((facts[row] & GROK_ROW_EDIT) != 0) {
+            int start = first_text(sc, row, 0), right = sc->columns - (start >= 6 ? start - 6 : 0) - 2;
+            bool is_added = grok_edit_colour(sc, row) == 2;
+
+            int gutter = start;
+
+            while (gutter < sc->columns && isdigit((int)glyph_at(sc, row, gutter)))
+                ++gutter; /* the line's number: the digits the row starts with */
+            for (int column = start; column < right && column < sc->columns; ++column) {
+                if ((sc->looks[row][column] & LOOK_OTHER) != 0)
+                    continue;
+                bool is_number = column < gutter;
+                want[column] = is_number ? (is_added ? PAINT_EDIT_GUTTER_ADDED : PAINT_EDIT_GUTTER_REMOVED)
+                                         : (is_added ? PAINT_EDIT_ADDED : PAINT_EDIT_REMOVED);
+            }
+        } else if ((facts[row] & GROK_ROW_LABEL) == 0 && !is_blank_row(sc, row)) {
+            want_grok_text(sc, row, want);
         }
         for (int column = 0; column < sc->columns; ++column)
             if (is_number_paint(paint_at(sc, row, column)) && want[column] == PAINT_NONE)
