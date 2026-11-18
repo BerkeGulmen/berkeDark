@@ -97,8 +97,18 @@ For programs other than Claude Code (made for Qwen Code, 2026-11-18):
   writes it again on the selection ground of its pool (`@{bg:base.selection}`), in the text colour.
 - Grok's terminal theme draws the band behind your messages one small step from the terminal's background toward
   its foreground (`#212127` with berkeDark's foot colours); berkeDark writes it again in the band of its pool
-  (`@{bg:chat.user.message}`). Grok draws that band only in terminals it asks for their colours, which foot is not:
-  see `cli/README.md`.
+  (`@{bg:chat.user.message}`).
+
+When the program is named `grok` (Grok itself, or the berkeDark-grok wrapper), on its full screen:
+
+- Your messages (a row that starts with a bold `❯` and its further bold rows) stand on `@{bg:chat.user.message}`,
+  with the empty row above and below, across the band's width: Grok draws no band in foot, which it does not ask
+  for its colours. `TERM` stays as it is.
+- In a block of code (the rows above Grok's grey `◇` row with the language) Grok's palette roles take the pool's
+  classes: keywords `@{code.keyword}`, names of functions `@{code.function.definition}`, parameters `@{code.parameter}`,
+  types `@{code.type}`, strings `@{code.string}`, keys `@{code.property.key}`, numbers `@{code.number}`, constants
+  `@{code.constant.language}`, signs `@{code.punctuation}`, comments `@{code.comment}`; in a `diff` block the `+`
+  `@{diff.added.mark}`, the added text `@{ansi.green}`, the `-` `@{diff.removed.mark}`.
 
 Tested on Void Linux with foot 1.28 and Claude Code 2.1.322. Not tested: other distributions,
 other terminals and other ways of installing Claude Code. macOS and Windows are not supported.

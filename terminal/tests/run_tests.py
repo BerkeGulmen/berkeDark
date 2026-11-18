@@ -673,6 +673,76 @@ def run_other_cases():
     return failures
 
 
+
+# Grok 1.0.89 in its terminal theme (2026-11-18): "--filter CHUNK 6 40 grok" takes the stream as Grok's.
+GROK_FRAME = ON_SCREEN + E + b"[?2026h"
+WINE = b"48;2;38;3;7"
+GROK_CASES = [
+    ("the user's message gets the band, with the empty rows around it",
+     GROK_FRAME + row_at(3, 6) + E + b"[1m" + "❯ hi".encode() + E + b"[22m" + FRAME_END,
+     GROK_FRAME + row_at(3, 6) + E + b"[1m" + "❯ hi".encode() + E + b"[22m" + FRAME_END + E + b"[?2026h" + E + b"7"
+     + row_at(2, 3) + E + b"[0;" + WINE + b"m" + b" " * 36
+     + row_at(3, 3) + E + b"[0;" + WINE + b"m   " + E + b"[0;1;" + WINE + b"m" + "❯".encode() + E + b"[0;" + WINE + b"m "
+     + E + b"[0;1;" + WINE + b"mhi" + E + b"[0;" + WINE + b"m" + b" " * 29
+     + row_at(4, 3) + E + b"[0;" + WINE + b"m" + b" " * 36 + E + b"8" + E + b"[?2026l"),
+    ("code above a language row takes the pool's classes",
+     GROK_FRAME + row_at(2, 3) + E + b"[38;5;5mdef" + E + b"[39m " + E + b"[38;5;4mf" + E + b"[39m" + E + b"[38;5;4m(" + E
+     + b"[38;5;3mr" + E + b"[38;5;4m)" + E + b"[38;5;6m:" + E + b"[39m x = " + E + b"[38;5;1m42" + E + b"[39m" + row_at(3, 3)
+     + E + b"[38;5;8m" + "◇ python".encode() + E + b"[39m" + FRAME_END,
+     GROK_FRAME + row_at(2, 3) + E + b"[38;5;5mdef" + E + b"[39m " + E + b"[38;5;4mf" + E + b"[39m" + E + b"[38;5;4m(" + E
+     + b"[38;5;3mr" + E + b"[38;5;4m)" + E + b"[38;5;6m:" + E + b"[39m x = " + E + b"[38;5;1m42" + E + b"[39m" + row_at(3, 3)
+     + E + b"[38;5;8m" + "◇ python".encode() + E + b"[39m" + FRAME_END + E + b"[?2026h" + E + b"7" + row_at(2, 3)
+     + E + b"[0;38;2;87;191;255mdef" + row_at(2, 7) + E + b"[0;38;2;63;127;255mf" + E + b"[0;38;2;178;217;255m(" + E
+     + b"[0;3;38;2;255;158;96mr" + E + b"[0;38;2;178;217;255m):" + row_at(2, 17) + E + b"[0;38;2;255;0;255m42" + E + b"8"
+     + E + b"[?2026l"),
+    ("a diff block's marks and added text",
+     GROK_FRAME + row_at(2, 3) + E + b"[38;5;6m-" + E + b"[38;5;1mold" + row_at(3, 3) + E + b"[38;5;6m+new" + row_at(4, 3) + E
+     + b"[38;5;8m" + "◇ diff".encode() + E + b"[39m" + FRAME_END,
+     GROK_FRAME + row_at(2, 3) + E + b"[38;5;6m-" + E + b"[38;5;1mold" + row_at(3, 3) + E + b"[38;5;6m+new" + row_at(4, 3) + E
+     + b"[38;5;8m" + "◇ diff".encode() + E + b"[39m" + FRAME_END + E + b"[?2026h" + E + b"7" + row_at(2, 3)
+     + E + b"[0;38;2;255;92;124m-" + row_at(3, 3) + E + b"[0;38;2;63;255;127m+" + E + b"[0;38;2;169;236;118mnew" + E + b"8"
+     + E + b"[?2026l"),
+    ("a bold row without the mark gets no band",
+     GROK_FRAME + row_at(3, 6) + E + b"[1mhi there" + E + b"[22m" + FRAME_END,
+     GROK_FRAME + row_at(3, 6) + E + b"[1mhi there" + E + b"[22m" + FRAME_END),
+    ("the input box's mark after its border gets no band",
+     GROK_FRAME + row_at(3, 3) + "│ ".encode() + E + b"[1m" + "❯ hi".encode() + E + b"[22m" + FRAME_END,
+     GROK_FRAME + row_at(3, 3) + "│ ".encode() + E + b"[1m" + "❯ hi".encode() + E + b"[22m" + FRAME_END),
+    ("coloured rows without a language row under them stay",
+     GROK_FRAME + row_at(2, 3) + E + b"[38;5;5mdef" + E + b"[39m" + FRAME_END,
+     GROK_FRAME + row_at(2, 3) + E + b"[38;5;5mdef" + E + b"[39m" + FRAME_END),
+]
+GROK_RECORDING = Path(__file__).resolve().parent / "recordings" / "grok-1.0.89-reply-90x150.bin.gz"
+
+
+def run_grok_cases():
+    import gzip
+    failures = 0
+    for name, given, wanted in GROK_CASES:
+        for chunk, mode in (("65536", "grok"), ("1", "grok")):
+            got = subprocess.run([BINARY, "--filter", chunk, "6", "40", mode], input=given, capture_output=True).stdout
+            if got != wanted:
+                failures += 1
+                print(f"FAIL {name} (chunk {chunk}):\n got  {got!r}\n want {wanted!r}")
+        # Another program's stream is left as it is (save for what applies to every program, here nothing).
+        other = subprocess.run([BINARY, "--filter", "65536", "6", "40", "other"], input=given, capture_output=True).stdout
+        if other != given:
+            failures += 1
+            print(f"FAIL {name} (as another program's): {other!r}")
+    print(f"grok: {len(GROK_CASES)} cases, each whole, byte by byte and as another program's, {failures} failed")
+    # A real recording: Grok's reply to the look sample, from a local stand-in endpoint.
+    stream = gzip.decompress(GROK_RECORDING.read_bytes())
+    whole = subprocess.run([BINARY, "--filter", "65536", "90", "150", "grok"], input=stream, capture_output=True).stdout
+    bytewise = subprocess.run([BINARY, "--filter", "7", "90", "150", "grok"], input=stream, capture_output=True).stdout
+    failures += check("grok recording: the same in pieces of 7 bytes", whole == bytewise)
+    failures += check("grok recording: the user's message on the band", ("1;" + "48;2;38;3;7m❯").encode() in whole.replace(b"\x1b[0;", b""))
+    for what, needle in (("keyword", b"38;2;87;191;255mdef"), ("number", b"38;2;255;0;255m3"), ("comment", b"3;38;2;112;112;112m"),
+                         ("JSON key", b"38;2;255;191;31mad"), ("string", b"38;2;255;255;0mdeneme"), ("type", b"38;2;63;255;127mfloat"),
+                         ("added mark", b"38;2;63;255;127m+"), ("removed mark", b"38;2;255;92;124m-")):
+        failures += check(f"grok recording: {what} in the pool's colour", needle in whole)
+    return failures
+
+
 def run_reply_cases():
     failures = 0
     for name, given, wanted in REPLY_CASES:
@@ -882,6 +952,20 @@ def run_pty_cases():
                               repr(text))
             os.close(named_master)
 
+        # Grok (2026-11-18): the band under the user's message and the code colours follow the program's name.
+        for name, is_grok in (("grok", True), ("notgrok", False)):
+            script = Path(folder) / name
+            script.write_text("#!/bin/sh\nsleep 0.4\nprintf '\\033[?1049h\\033[?2026h\\033[3;6H\\033[1m❯ hi\\033[22m"
+                              "\\033[5;3H\\033[38;5;1m42\\033[39m\\033[6;3H\\033[38;5;8m◇ python\\033[39m\\033[?2026l'\n"
+                              "sleep 0.2\n")
+            script.chmod(0o755)
+            named_pid, named_master = spawn(str(script))
+            text = read_all(named_master, 2)
+            finish(named_pid)
+            failures += check(f"the user's band only under Grok ({name})", (b"48;2;38;3;7m" in text) == is_grok, repr(text))
+            failures += check(f"Grok's code colours only under Grok ({name})", (b"38;2;255;0;255m42" in text) == is_grok, repr(text))
+            os.close(named_master)
+
         # Qwen Code's looks (2026-11-18): its text colour, its block cursor and its own drawn cursor.
         for name, is_claude in (("claude", True), ("qwen", False)):
             script = Path(folder) / name
@@ -917,6 +1001,6 @@ def run_pool_check():
 if __name__ == "__main__":
     signal.signal(signal.SIGCHLD, signal.SIG_DFL)
     failed = (run_stream_cases() + run_box_cases() + run_syntax_cases() + run_number_cases() + run_input_cases()
-              + run_reply_cases() + run_other_cases() + run_pty_cases() + run_pool_check())
+              + run_reply_cases() + run_other_cases() + run_grok_cases() + run_pty_cases() + run_pool_check())
     print("all passed" if failed == 0 else f"{failed} failed")
     sys.exit(1 if failed else 0)

@@ -77,12 +77,25 @@ Grok 1.0.89 also needs
 
 while the theme is being rolled out; without it `theme = "terminal"` falls back to Grok's own theme.
 
-Measured on Grok 1.0.89 (2026-11-18), through berkeDark's colour interpreter: headings, bold, slanted and
-struck text, inline code, links, quotes, lists, task boxes, tables, code and diffs take the palette's sixteen
-colours, and Grok leaves the terminal's cursor alone. The band behind your own messages Grok draws only in
-terminals it asks for their colours; it does not ask foot (it knows it by `TERM=foot`), so in foot your
-messages are bold, with no band. When Grok draws the band, the interpreter turns it into berkeDark's wine
-(`#260307`). To have the band in foot, start Grok with `TERM=xterm-256color`; Grok then also leaves out its
-query for the keyboard protocol foot speaks, so try it before keeping it.
+Measured on Grok 1.0.89 (2026-11-18): headings, bold, slanted and struck text, inline code, links, quotes,
+lists, task boxes and tables take the palette's sixteen colours, and Grok leaves the terminal's cursor alone.
+Two things Grok cannot be told, so berkeDark's colour interpreter (`../terminal`) does them when Grok runs
+inside it (it knows Grok by its process name, as it knows Claude Code); nothing needs to change in how Grok
+is started, `TERM` included:
+
+- **Your messages on berkeDark's band.** Grok draws its band only in terminals it asks for their colours, and
+  it does not ask foot, so there your messages were plain bold. The interpreter lays berkeDark's wine
+  (`#260307`) under each of your messages, with the empty row above and below, across the band's width. Where
+  Grok does draw its own band, it becomes the same wine.
+- **Code and diffs in berkeDark's classes.** Grok gives its code palette colours in roles of its own (numbers
+  red, keywords magenta, the added row of a diff cyan). In a block of code, recognised by the grey `◇` row with
+  its language under it, the interpreter gives them berkeDark's: keywords sky, names of functions blue,
+  parameters orange, types spring green, strings yellow, keys of JSON amber, numbers magenta, constants and
+  signs ice, comments grey and slanted; in a `diff` block the `+` spring green and the added text green, the
+  `-` rose.
+
+Limits: a block of code is followed upward from its `◇` row to the first empty row, so the rows above an empty
+row inside a block keep Grok's colours; code Grok shows outside such blocks (a file it reads, the diff of an
+edit) was not measured and keeps them too.
 
 Tested with Qwen Code 0.27.1 and 0.28.0 (its Ink interface under Node and its OpenTUI interface under Bun), Codex 0.167.0 and Grok 1.0.89 (answered by a local stand-in endpoint, no account) on Void Linux in foot.

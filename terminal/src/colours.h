@@ -154,3 +154,14 @@
  * writes the ground of its pool's selection class again, with berkeDark's text colour on it (2026-11-18).
  */
 #define SELECTION_GROUND "48;2;37;34;97" /* #252261 */
+
+/*
+ * Grok (2026-11-18). Its terminal theme draws code with the palette's colours in roles of its own: keywords
+ * magenta (35), names of functions and brackets blue (34), comments blue and slanted, strings, keys and
+ * parameters yellow (33), types and signs cyan (36), numbers and constants red (31); in a diff block the added
+ * row cyan, the removed row red. berkeDark gives them the pool's classes, as for Claude Code.
+ */
+#define CODE_PARAMETER_COLOUR "255;158;96"       /* #ff9e60, slanted */
+#define DIFF_ADDED_MARK_COLOUR "63;255;127"     /* #3fff7f: the + of an added row */
+#define DIFF_REMOVED_MARK_COLOUR "255;92;124" /* #ff5c7c: the - of a removed row */
+#define DIFF_ADDED_TEXT_COLOUR "169;236;118"          /* #a9ec76: an added row's text, as Claude Code's diff blocks */

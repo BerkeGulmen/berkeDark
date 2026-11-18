@@ -109,6 +109,11 @@ enum {
     PAINT_COMMAND_OPERATOR,
     PAINT_COMMAND_TEXT,
     PAINT_SUGGESTION,
+    PAINT_BAND,              /* Grok: the program's own look, on the band behind the user's messages */
+    PAINT_CODE_PARAMETER,    /* Grok's code */
+    PAINT_DIFF_ADDED_MARK,   /* Grok's diff blocks */
+    PAINT_DIFF_REMOVED_MARK,
+    PAINT_DIFF_ADDED_TEXT,
 };
 
 enum { NO_EDGE, TOP_EDGE, BOTTOM_EDGE, STALE_EDGE };
@@ -132,11 +137,13 @@ struct style {
     bool is_soft_cursor;   /* outside Claude Code: the background is Qwen Code's drawn cursor, taken away on the terminal */
     bool is_selection;     /* outside Claude Code: the background is Qwen Code's selection, written again in berkeDark's */
     bool is_white;         /* the program's colour is exactly white (#ffffff), as on Qwen Code's selection */
+    int palette_index;     /* outside Claude Code: the palette colour (0-15) named by 38;5;N, as Grok writes them; else -1 */
 };
 
 struct screen {
     bool is_alternate;
     bool is_claude;  /* the full-screen program is Claude Code: its marks and diff colours apply */
+    bool is_grok;    /* the full-screen program is Grok: its user band and code colours apply */
     bool has_saved_cursor, is_insert, is_origin; /* the program's states in which numbers are left alone */
     bool is_no_wrap; /* the program turned automatic wrapping off; a terminal mode, so a new map keeps it */
     bool is_cursor_hidden; /* the program hid the terminal's cursor; a terminal mode, so a new map keeps it */
@@ -177,6 +184,7 @@ static struct interpreter interpreter;
 
 static int program_master = -1; /* the pseudo-terminal; -1 under --filter, where the stream is taken as Claude Code's */
 static bool filter_is_claude = true; /* --filter ... other: the stream is taken as another program's */
+static bool filter_is_grok = false;  /* --filter ... grok: the stream is taken as Grok's */
 
 static void end_gutter_run(struct screen *sc);
 static void end_word(struct screen *sc);
@@ -184,6 +192,7 @@ static bool is_input_row(const struct screen *sc, int row);
 static void put_program_colour(const struct style *s);
 static bool has_map(const struct screen *sc);
 static void put_text(const char *text);
+static int read_parameter(const char *p);
 static bool foreground_is_claude(void);
 
 /*
@@ -372,6 +381,14 @@ static void apply_style_sequence(struct interpreter *in)
             s->extended[length] = '\0';
             s->is_body = is_colour_value(start, p, "38" BODY_FOREGROUND) && !is_claude_now(&in->screen);
             s->is_white = is_colour_value(start, p, QWEN_SELECTION_TEXT);
+            s->palette_index = -1;
+            if (p - start >= 6 && p - start <= 7 && (strncmp(start, "38;5;", 5) == 0 || strncmp(start, "38:5:", 5) == 0)) {
+                int n = read_parameter(start + 5);
+                char wanted[16];
+                snprintf(wanted, sizeof wanted, "38;5;%d", n);
+                if (n < 16 && is_colour_value(start, p, wanted) && !is_claude_now(&in->screen))
+                    s->palette_index = n;
+            }
             takes_white = s->is_white && s->is_selection;
             break;
         }
@@ -884,11 +901,16 @@ static void print_code_point(struct interpreter *in, unsigned code_point)
 
     unsigned char look = 0;
 
-    if (s->background || s->underline || s->strike || s->reverse || (s->foreground == 38 && !s->is_body) || s->tint != NULL) {
+    bool is_palette_by_number = s->foreground == 38 && s->palette_index >= 0 && s->palette_index < 16 && !s->is_body;
+
+    if (s->background || s->underline || s->strike || s->reverse || (s->foreground == 38 && !s->is_body && !is_palette_by_number) ||
+        s->tint != NULL) {
         look = LOOK_OTHER | (s->is_body ? LOOK_BODY : 0); /* the body mark only tells a cell written again its colour */
     } else {
         if (s->is_body)
             look |= LOOK_BODY;
+        else if (is_palette_by_number)
+            look |= (unsigned char)(LOOK_COLOUR | s->palette_index);
         else if (s->foreground != 0)
             look |= (unsigned char)(LOOK_COLOUR | (s->foreground < 90 ? s->foreground - 30 : s->foreground - 82));
         if (s->dim)
@@ -2234,12 +2256,17 @@ static const char *paint_colour(int kind)
     case PAINT_COMMAND_OPERATOR: return COMMAND_OPERATOR_COLOUR;
     case PAINT_COMMAND_TEXT: return COMMAND_TEXT_COLOUR;
     case PAINT_SUGGESTION: return SUGGESTION_COLOUR;
+    case PAINT_CODE_PARAMETER: return CODE_PARAMETER_COLOUR;
+    case PAINT_DIFF_ADDED_MARK: return DIFF_ADDED_MARK_COLOUR;
+    case PAINT_DIFF_REMOVED_MARK: return DIFF_REMOVED_MARK_COLOUR;
+    case PAINT_DIFF_ADDED_TEXT: return DIFF_ADDED_TEXT_COLOUR;
     default: return NULL;
     }
 }
 
 /* A style in one number: the paint kind, the marks, and the program's palette colour when the kind keeps it. */
-enum { STYLE_KIND = 0x3f, STYLE_BOLD = 0x100, STYLE_DIM = 0x200, STYLE_ITALIC = 0x400, STYLE_PALETTE = 0x800, STYLE_INDEX_SHIFT = 12 };
+enum { STYLE_KIND = 0x3f, STYLE_BOLD = 0x100, STYLE_DIM = 0x200, STYLE_ITALIC = 0x400, STYLE_PALETTE = 0x800, STYLE_INDEX_SHIFT = 12,
+       STYLE_BAND = 0x10000 };
 
 /*
  * The style a paint kind gives a cell. A kind with a colour keeps the cell's bold and italic, drops its dim
@@ -2255,7 +2282,8 @@ static unsigned paint_style(const struct screen *sc, int row, int column, int ki
     if (paint_colour(kind) != NULL) {
         if (kind == PAINT_TABLE_HEADER)
             style |= STYLE_BOLD;
-        if (kind == PAINT_CODE_COMMENT || kind == PAINT_CODE_DECORATOR || kind == PAINT_COMMAND_OPTION)
+        if (kind == PAINT_CODE_COMMENT || kind == PAINT_CODE_DECORATOR || kind == PAINT_COMMAND_OPTION ||
+            kind == PAINT_CODE_PARAMETER)
             style |= STYLE_ITALIC;
         return style | (unsigned)kind;
     }
@@ -2263,6 +2291,8 @@ static unsigned paint_style(const struct screen *sc, int row, int column, int ki
         style |= STYLE_DIM;
     if ((look & LOOK_COLOUR) != 0)
         style |= STYLE_PALETTE | (unsigned)(look & LOOK_INDEX) << STYLE_INDEX_SHIFT;
+    if (kind == PAINT_BAND)
+        style |= STYLE_BAND;
     return style;
 }
 
@@ -2282,6 +2312,8 @@ static void put_style(unsigned style)
         length += snprintf(text + length, sizeof text - (size_t)length, ";38;2;%s", colour);
     else if ((style & STYLE_PALETTE) != 0)
         length += snprintf(text + length, sizeof text - (size_t)length, ";%d", index < 8 ? 30 + index : 82 + index);
+    if ((style & STYLE_BAND) != 0)
+        length += snprintf(text + length, sizeof text - (size_t)length, ";" BAND_BACKGROUND);
     text[length++] = 'm';
     put(text, (size_t)length);
 }
@@ -2296,6 +2328,45 @@ static void put_painted_glyph(const struct screen *sc, int row, int column, int 
     case PAINT_RULE: put_text(RULE_MARK); break;
     case PAINT_HIDDEN: put_text(" "); break;
     default: put_code_point(glyph != 0 ? glyph : ' '); break;
+    }
+}
+
+/*
+ * Writes again each cell of the row whose paint is not what want asks for: in its colour, or back in the
+ * program's own look. The first write of a frame opens a synchronized update and saves the cursor.
+ */
+static void paint_cells(struct screen *sc, int row, const unsigned char *want, bool *has_begun)
+{
+    unsigned style = ~0u;
+    int cursor = -1; /* the column the terminal's cursor stands at on this row, when berkeDark put it there */
+
+    for (int column = 0; column < sc->columns; ++column) {
+        unsigned cell = sc->glyphs[row][column];
+        int kind = want[column];
+
+        if (kind == paint_at(sc, row, column) || (cell & GLYPH_JOINED) != 0)
+            continue;
+        if ((cell & GLYPH_TAIL) != 0) {
+            set_paint(sc, row, column, kind); /* written with the first cell of its character */
+            continue;
+        }
+        if (!*has_begun) {
+            put_text("\033[?2026h\0337");
+            *has_begun = true;
+        }
+        if (cursor != column)
+            put_move(row, column);
+
+        unsigned wanted_style = paint_style(sc, row, column, kind);
+        bool is_wide = column + 1 < sc->columns && (sc->glyphs[row][column + 1] & GLYPH_TAIL) != 0;
+
+        if (wanted_style != style) {
+            put_style(wanted_style);
+            style = wanted_style;
+        }
+        put_painted_glyph(sc, row, column, kind);
+        set_paint(sc, row, column, kind);
+        cursor = column + (is_wide ? 2 : 1);
     }
 }
 
@@ -2343,41 +2414,205 @@ static void settle_reply(struct interpreter *in)
     }
 
     for (int row = 0; row < sc->rows; ++row) {
-        unsigned style = ~0u;
-        int cursor = -1; /* the column the terminal's cursor stands at on this row, when berkeDark put it there */
-
         want_row(sc, row, (facts[row] & ROW_REPLY) != 0, (facts[row] & ROW_CODE) != 0, want);
-        for (int column = 0; column < sc->columns; ++column) {
-            unsigned cell = sc->glyphs[row][column];
-            int kind = want[column];
-
-            if (kind == paint_at(sc, row, column) || (cell & GLYPH_JOINED) != 0)
-                continue;
-            if ((cell & GLYPH_TAIL) != 0) {
-                set_paint(sc, row, column, kind); /* written with the first cell of its character */
-                continue;
-            }
-            if (!has_begun) {
-                put_text("\033[?2026h\0337");
-                has_begun = true;
-            }
-            if (cursor != column)
-                put_move(row, column);
-
-            unsigned wanted_style = paint_style(sc, row, column, kind);
-            bool is_wide = column + 1 < sc->columns && (sc->glyphs[row][column + 1] & GLYPH_TAIL) != 0;
-
-            if (wanted_style != style) {
-                put_style(wanted_style);
-                style = wanted_style;
-            }
-            put_painted_glyph(sc, row, column, kind);
-            set_paint(sc, row, column, kind);
-            cursor = column + (is_wide ? 2 : 1);
-        }
+        paint_cells(sc, row, want, &has_begun);
     }
     if (has_begun)
         put_text("\0338\033[?2026l");
+}
+
+/*
+ * Grok (2026-11-18, measured on Grok 1.0.89 with its terminal theme). In foot Grok draws the user's messages bold
+ * on the terminal's canvas: Grok draws its band only in terminals it asks for their colours, and it does not ask
+ * foot. A user's message is a row whose text starts with Grok's mark, a bold "❯" in the text colour, then a blank
+ * and bold text; its further rows start bold under that text. berkeDark lays the band of its pool under them,
+ * with the empty row above and below, across the width the band takes (the mark's column less three, at both
+ * edges), keeping every character in the program's own look.
+ *
+ * A block of code is drawn without a frame; the row under it holds Grok's grey "◇" and the block's language. The
+ * rows right above that row, up to an empty row, are the block's. Their palette colours get the pool's classes.
+ */
+enum { GROK_ROW_BAND = 1, GROK_ROW_CODE = 2, GROK_ROW_DIFF = 4 };
+
+static bool is_grok_text_cell(const struct screen *sc, int row, int column)
+{
+    return column < sc->columns && !is_gap(sc, row, column) && (sc->cells[row][column] & CELL_BOLD) != 0 &&
+           (sc->looks[row][column] & (LOOK_COLOUR | LOOK_DIM | LOOK_OTHER)) == 0;
+}
+
+static bool is_grok_label_row(const struct screen *sc, int row, int *language)
+{
+    int start = first_text(sc, row, 0);
+
+    if (start + 2 >= sc->columns || glyph_at(sc, row, start) != 0x25c7 || sc->looks[row][start] != (LOOK_COLOUR | 8))
+        return false;
+    *language = start + 2;
+    return true;
+}
+
+static bool is_quote(unsigned glyph)
+{
+    return glyph == '"' || glyph == '\'' || glyph == '`';
+}
+
+static bool is_code_word_glyph(unsigned glyph)
+{
+    return glyph < 0x80 ? isalnum((int)glyph) || glyph == '_' : glyph > 0;
+}
+
+/* The pool's class for a run of Grok's code drawn in one palette colour. */
+static int grok_code_kind(const struct screen *sc, int row, int from, int to, int index, bool is_italic)
+{
+    unsigned first = glyph_at(sc, row, from);
+    bool is_word = is_code_word_glyph(first);
+
+    switch (index) {
+    case 5: return PAINT_CODE_KEYWORD;
+    case 4: return is_italic ? PAINT_CODE_COMMENT : is_word ? PAINT_CODE_FUNCTION : PAINT_CODE_PUNCTUATION;
+    case 6: return is_word ? PAINT_CODE_TYPE : PAINT_CODE_PUNCTUATION;
+    case 1: return first < 0x80 && isdigit((int)first) ? PAINT_CODE_NUMBER : PAINT_CODE_CONSTANT;
+    case 3: {
+        int left = from - 1, right = to;
+
+        while (left >= 0 && glyph_at(sc, row, left) == ' ')
+            --left;
+        if (left < 0 || !is_quote(glyph_at(sc, row, left)))
+            return PAINT_CODE_PARAMETER;
+        if (right < sc->columns && is_quote(glyph_at(sc, row, right))) {
+            for (++right; right < sc->columns && glyph_at(sc, row, right) == ' '; ++right)
+                ;
+            if (right < sc->columns && glyph_at(sc, row, right) == ':')
+                return PAINT_CODE_KEY;
+        }
+        return PAINT_CODE_STRING;
+    }
+    default: return PAINT_NONE;
+    }
+}
+
+static void want_grok_code(const struct screen *sc, int row, bool is_diff, unsigned char *want)
+{
+    int start = first_text(sc, row, 0);
+    unsigned mark = start < sc->columns ? glyph_at(sc, row, start) : 0;
+
+    if (is_diff && (mark == '+' || mark == '-')) {
+        for (int column = start; column < sc->columns; ++column) {
+            if (is_gap(sc, row, column) || (sc->looks[row][column] & (LOOK_COLOUR | LOOK_OTHER)) != LOOK_COLOUR)
+                continue;
+            if (column == start)
+                want[column] = mark == '+' ? PAINT_DIFF_ADDED_MARK : PAINT_DIFF_REMOVED_MARK;
+            else if (mark == '+')
+                want[column] = PAINT_DIFF_ADDED_TEXT;
+        }
+        return;
+    }
+    for (int column = start; column < sc->columns;) {
+        unsigned char look = sc->looks[row][column];
+
+        if (is_gap(sc, row, column) || (look & (LOOK_COLOUR | LOOK_OTHER)) != LOOK_COLOUR) {
+            ++column;
+            continue;
+        }
+        int end = column + 1;
+        int index = look & LOOK_INDEX;
+        bool splits = index == 4 || index == 6; /* a name and the brackets after it share a colour: told apart */
+
+        while (end < sc->columns && sc->looks[row][end] == look && !is_gap(sc, row, end) &&
+               (!splits || is_code_word_glyph(glyph_at(sc, row, end)) == is_code_word_glyph(glyph_at(sc, row, column))))
+            ++end;
+        int kind = grok_code_kind(sc, row, column, end, look & LOOK_INDEX, (look & LOOK_ITALIC) != 0);
+
+        for (int i = column; i < end; ++i)
+            want[i] = (unsigned char)kind;
+        column = end;
+    }
+}
+
+static void settle_grok(struct screen *sc)
+{
+    static unsigned char facts[MAX_ROWS], left_of[MAX_ROWS], want[MAX_COLUMNS];
+    bool has_begun = false;
+
+    if (!sc->is_grok || !sc->is_dirty || sc->has_saved_cursor || sc->is_insert || sc->is_origin)
+        return;
+    sc->is_dirty = false;
+    memset(facts, 0, sizeof facts);
+
+    for (int row = 0; row < sc->rows; ++row) {
+        int start = first_text(sc, row, 0), language;
+
+        if (start + 2 < sc->columns && glyph_at(sc, row, start) == 0x276f && is_grok_text_cell(sc, row, start) &&
+            is_gap(sc, row, start + 1) && is_grok_text_cell(sc, row, start + 2)) {
+            int last = row, left = start >= 3 ? start - 3 : 0;
+
+            while (last + 1 < sc->rows && first_text(sc, last + 1, 0) == start + 2 &&
+                   is_grok_text_cell(sc, last + 1, start + 2))
+                ++last;
+            for (int r = row > 0 && is_blank_row(sc, row - 1) ? row - 1 : row;
+                 r <= (last + 1 < sc->rows && is_blank_row(sc, last + 1) ? last + 1 : last); ++r) {
+                facts[r] |= GROK_ROW_BAND;
+                left_of[r] = (unsigned char)(left < 255 ? left : 255);
+            }
+            row = last;
+        } else if (is_grok_label_row(sc, row, &language)) {
+            bool is_diff = language + 4 <= sc->columns && glyph_at(sc, row, language) == 'd' &&
+                           glyph_at(sc, row, language + 1) == 'i' && glyph_at(sc, row, language + 2) == 'f' &&
+                           glyph_at(sc, row, language + 3) == 'f' && is_gap(sc, row, language + 4);
+
+            for (int r = row - 1; r >= 0 && !is_blank_row(sc, r) && facts[r] == 0; --r)
+                facts[r] |= GROK_ROW_CODE | (is_diff ? GROK_ROW_DIFF : 0);
+        }
+    }
+    for (int row = 0; row < sc->rows; ++row) {
+        memset(want, PAINT_NONE, (size_t)sc->columns);
+        if ((facts[row] & GROK_ROW_BAND) != 0) {
+            int left = left_of[row];
+
+            for (int column = left; column < sc->columns - left; ++column)
+                if ((sc->looks[row][column] & LOOK_OTHER) == 0)
+                    want[column] = PAINT_BAND;
+        } else if ((facts[row] & GROK_ROW_CODE) != 0) {
+            want_grok_code(sc, row, (facts[row] & GROK_ROW_DIFF) != 0, want);
+        }
+        for (int column = 0; column < sc->columns; ++column)
+            if (is_number_paint(paint_at(sc, row, column)) && want[column] == PAINT_NONE)
+                want[column] = (unsigned char)paint_at(sc, row, column); /* a number's own colour stays */
+        paint_cells(sc, row, want, &has_begun);
+    }
+    if (has_begun)
+        put_text("\0338\033[?2026l");
+}
+
+/* The name of the program in the foreground of the pseudo-terminal (Linux), with its line end; "" when not known. */
+static void foreground_name(char *name, size_t size)
+{
+    char path[64];
+    pid_t group = tcgetpgrp(program_master);
+
+    name[0] = '\0';
+    if (group <= 0)
+        return;
+    snprintf(path, sizeof path, "/proc/%d/comm", (int)group);
+
+    FILE *file = fopen(path, "r");
+
+    if (file == NULL)
+        return;
+    if (fgets(name, (int)size, file) == NULL)
+        name[0] = '\0';
+    fclose(file);
+}
+
+/* Whether that program is Grok: its own binary (grok, grok-1.0.89-linux...) or berkeDark-grok around it. */
+static bool foreground_is_grok(void)
+{
+    if (program_master < 0)
+        return filter_is_grok;
+
+    char name[32];
+
+    foreground_name(name, sizeof name);
+    return strcmp(name, "grok\n") == 0 || strncmp(name, "grok-", 5) == 0 || strcmp(name, "berkeDark-grok\n") == 0;
 }
 
 /* Whether the program in the foreground of the pseudo-terminal is Claude Code, by its process name (Linux). */
@@ -2386,20 +2621,10 @@ static bool foreground_is_claude(void)
     if (program_master < 0)
         return filter_is_claude;
 
-    char path[64], name[32] = "";
-    pid_t group = tcgetpgrp(program_master);
+    char name[32];
 
-    if (group <= 0)
-        return false;
-    snprintf(path, sizeof path, "/proc/%d/comm", (int)group);
-
-    FILE *file = fopen(path, "r");
-
-    if (file == NULL)
-        return false;
-    bool has_name = fgets(name, sizeof name, file) != NULL;
-    fclose(file);
-    return has_name && strcmp(name, "claude\n") == 0;
+    foreground_name(name, sizeof name);
+    return strcmp(name, "claude\n") == 0;
 }
 
 /*
@@ -2459,6 +2684,7 @@ static void apply_private_modes(struct interpreter *in, bool is_on)
         if (mode == 1049 || mode == 1047 || mode == 47) {
             sc->is_alternate = is_on;
             sc->is_claude = is_on && foreground_is_claude();
+            sc->is_grok = is_on && !sc->is_claude && foreground_is_grok();
             clear_map(sc);
         } else if (mode == 6) {
             sc->is_origin = is_on;
@@ -2471,6 +2697,7 @@ static void apply_private_modes(struct interpreter *in, bool is_on)
         } else if (mode == 2026 && !is_on && has_map(sc)) {
             draw_box(in);
             settle_reply(in);
+            settle_grok(sc);
             settle_soft_cursor(sc);
         }
     }
@@ -3015,8 +3242,10 @@ int main(int argc, char **argv)
 {
     setlocale(LC_CTYPE, "C.UTF-8");
 
-    if (argc > 5 && strcmp(argv[1], "--filter") == 0 && strcmp(argv[5], "other") == 0)
+    if (argc > 5 && strcmp(argv[1], "--filter") == 0 && (strcmp(argv[5], "other") == 0 || strcmp(argv[5], "grok") == 0)) {
         filter_is_claude = false;
+        filter_is_grok = strcmp(argv[5], "grok") == 0;
+    }
     if (argc > 1 && strcmp(argv[1], "--filter") == 0)
         return run_filter(argc > 2 ? strtoul(argv[2], NULL, 10) : BLOCK_SIZE,
                           argc > 4 ? atoi(argv[3]) : 0, argc > 4 ? atoi(argv[4]) : 0);
