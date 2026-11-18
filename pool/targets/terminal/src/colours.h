@@ -28,6 +28,8 @@
 #define PROMPT_MARK_COLOUR "@{chat.user.input.mark}" /* @{chat.user.input.mark|#}, foot's bright7 */
 #define INPUT_MARK "@{mark:chat.user.input.mark}"              /* the input row: the program's own mark */
 #define SENT_MARK "@{mark:chat.user.message.mark}"               /* the user's sent rows */
+/* Grok's mark on its band takes the sent mark in this colour; its input mark takes PROMPT_MARK_COLOUR (2026-11-18). */
+#define SENT_MARK_COLOUR "@{chat.user.message.mark}" /* @{chat.user.message.mark|#} */
 
 /*
  * The text typed into Claude Code's input box (the author, 2026-11-10). The program gives it no colour,

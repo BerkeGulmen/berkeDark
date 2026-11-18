@@ -102,12 +102,13 @@ For programs other than Claude Code (made for Qwen Code, 2026-11-18):
 When the program is named `grok` (Grok itself, or the berkeDark-grok wrapper), on its full screen:
 
 - Your messages (a row that starts with a bold `❯` and its further bold rows) stand on `@{bg:chat.user.message}`,
-  with the empty row above and below, across the band's width; their words take `@{chat.user.message.text}` (the
-  `❯` stays as Grok drew it), numbers and dates on it keep their colours, and the `@{chat.user.message.border}` box
-  goes around the band as under Claude Code. Grok draws no band in foot, which it does not ask for its colours.
+  with the empty row above and below, across the band's width; their words take `@{chat.user.message.text}`,
+  numbers and dates on it keep their colours, Grok's `❯` becomes `@{mark:chat.user.message.mark|raw}` in
+  `@{chat.user.message.mark}` in the same cell (the text after it does not move), and the
+  `@{chat.user.message.border}` box goes around the band as under Claude Code. Grok draws no band in foot, which it does not ask for its colours.
   `TERM` stays as it is. (Not in compact mode, where Grok drops the `❯`.)
 - What you type in Grok's input box (inside its frame, after its `❯`) takes `@{chat.user.input.text}`; the hint
-  stays as Grok draws it.
+  stays as Grok draws it, and the `❯` stays, in `@{chat.user.input.mark}`.
 - The diff of an edit (all red or all green rows under a tool's `◆` row) stands on `@{bg:diff.removed}` and
   `@{bg:diff.added}`, its line numbers `@{diff.gutter}`.
 - Text: a heading of level 1 `@{prose.heading.1}`, heading lines `@{prose.heading.line}`, inline code `@{prose.code.inline}`,

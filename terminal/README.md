@@ -102,12 +102,13 @@ For programs other than Claude Code (made for Qwen Code, 2026-11-18):
 When the program is named `grok` (Grok itself, or the berkeDark-grok wrapper), on its full screen:
 
 - Your messages (a row that starts with a bold `❯` and its further bold rows) stand on `#260307`,
-  with the empty row above and below, across the band's width; their words take `#6fdcf0` (the
-  `❯` stays as Grok drew it), numbers and dates on it keep their colours, and the `#000000` box
-  goes around the band as under Claude Code. Grok draws no band in foot, which it does not ask for its colours.
+  with the empty row above and below, across the band's width; their words take `#6fdcf0`,
+  numbers and dates on it keep their colours, Grok's `❯` becomes `▶` in
+  `#fafcff` in the same cell (the text after it does not move), and the
+  `#000000` box goes around the band as under Claude Code. Grok draws no band in foot, which it does not ask for its colours.
   `TERM` stays as it is. (Not in compact mode, where Grok drops the `❯`.)
 - What you type in Grok's input box (inside its frame, after its `❯`) takes `#3fff7f`; the hint
-  stays as Grok draws it.
+  stays as Grok draws it, and the `❯` stays, in `#fafcff`.
 - The diff of an edit (all red or all green rows under a tool's `◆` row) stands on `#281a2d` and
   `#1d2a2b`, its line numbers `#6e7380`.
 - Text: a heading of level 1 `#ffff00`, heading lines `#ff5f07`, inline code `#a3a5f5`,

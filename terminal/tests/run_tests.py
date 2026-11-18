@@ -679,6 +679,8 @@ GROK_FRAME = ON_SCREEN + E + b"[?2026h"
 WINE = b"48;2;38;3;7"
 BAND_TEXT = E + b"[0;1;38;2;111;220;240;" + WINE + b"m"   # the words of a sent message: the pool's turquoise, on the band
 TYPED = E + b"[0;38;2;63;255;127m"                          # what the user types: the pool's spring green
+SENT_MARK_ON_BAND = E + b"[0;1;38;2;250;252;255;" + WINE + b"m" + "▶".encode()  # Grok's ❯ on the band, as under Claude Code
+INPUT_MARK_WHITE = E + b"[0;38;2;250;252;255m" + "❯".encode()               # Grok's ❯ in its input box, white
 
 
 def grok_box_row(row, inside):
@@ -688,20 +690,21 @@ def grok_box_row(row, inside):
 
 GROK_EMPTY_BAND = E + b"[0;" + WINE + b"m" + b" " * 34
 GROK_CASES = [
-    ("the user's message gets the band and the box, with the empty rows around it",
+    ("the user's message gets the band, the box and the white sent mark, with the empty rows around it",
      GROK_FRAME + row_at(3, 6) + E + b"[1m" + "❯ hi".encode() + E + b"[22m" + FRAME_END,
      GROK_FRAME + row_at(3, 6) + E + b"[1m" + "❯ hi".encode() + E + b"[22m" + FRAME_END + E + b"[?2026h" + E + b"7"
      + row_at(1, 3) + LINE + "▁".encode() * 36
      + grok_box_row(2, GROK_EMPTY_BAND)
-     + grok_box_row(3, E + b"[0;" + WINE + b"m  " + E + b"[0;1;" + WINE + b"m" + "❯".encode() + E + b"[0;" + WINE + b"m "
+     + grok_box_row(3, E + b"[0;" + WINE + b"m  " + SENT_MARK_ON_BAND + E + b"[0;" + WINE + b"m "
                     + BAND_TEXT + b"hi" + E + b"[0;" + WINE + b"m" + b" " * 28)
      + grok_box_row(4, GROK_EMPTY_BAND)
      + row_at(5, 3) + LINE + "▔".encode() * 36 + E + b"8" + E + b"[?2026l"),
-    ("what the user types in the input box takes the typed colour; the hint stays",
+    ("in the input box the mark turns white and what the user types takes the typed colour; the hint stays",
      GROK_FRAME + row_at(2, 3) + "╭────╮".encode() + row_at(3, 3) + "│ ❯ hi ab ".encode() + E + b"[2;3mipucu" + E + b"[0m"
      + "  │".encode() + row_at(4, 3) + "╰────╯".encode() + FRAME_END,
      GROK_FRAME + row_at(2, 3) + "╭────╮".encode() + row_at(3, 3) + "│ ❯ hi ab ".encode() + E + b"[2;3mipucu" + E + b"[0m"
-     + "  │".encode() + row_at(4, 3) + "╰────╯".encode() + FRAME_END + E + b"[?2026h" + E + b"7" + row_at(3, 7) + TYPED + b"hi"
+     + "  │".encode() + row_at(4, 3) + "╰────╯".encode() + FRAME_END + E + b"[?2026h" + E + b"7" + row_at(3, 5) + INPUT_MARK_WHITE
+     + row_at(3, 7) + TYPED + b"hi"
      + row_at(3, 10) + b"ab" + E + b"8" + E + b"[?2026l"),
     ("a bordered row with the mark but no box top above it stays",
      GROK_FRAME + row_at(3, 3) + "│ ❯ hi │".encode() + FRAME_END,
@@ -799,7 +802,7 @@ def run_grok_cases():
     whole = subprocess.run([BINARY, "--filter", "65536", "90", "150", "grok"], input=stream, capture_output=True).stdout
     bytewise = subprocess.run([BINARY, "--filter", "7", "90", "150", "grok"], input=stream, capture_output=True).stdout
     failures += check("grok recording: the same in pieces of 7 bytes", whole == bytewise)
-    failures += check("grok recording: the user's message on the band", ("1;" + "48;2;38;3;7m❯").encode() in whole.replace(b"\x1b[0;", b""))
+    failures += check("grok recording: the user's message on the band, with the white sent mark", SENT_MARK_ON_BAND in whole)
     for what, needle in (("keyword", b"38;2;87;191;255mdef"), ("number", b"38;2;255;0;255m3"), ("comment", b"3;38;2;112;112;112m"),
                          ("JSON key", b"38;2;255;191;31mad"), ("string", b"38;2;255;255;0mdeneme"), ("type", b"38;2;63;255;127mfloat"),
                          ("added mark", b"38;2;63;255;127m+"), ("removed mark", b"38;2;255;92;124m-")):
@@ -831,7 +834,8 @@ def run_grok_cases():
                          ("the box's left side", row_at(4, 3) + SIDE + "▏".encode()),
                          ("the box's right side", SIDE + "▕".encode() + row_at(5, 3)),
                          ("typed text in the pool's spring green", row_at(86, 7) + TYPED + b"B"),
-                         ("the mark stays as Grok drew it", E + b"[0;1;" + WINE + b"m" + "❯".encode())):
+                         ("the mark on the band is the white sent mark", SENT_MARK_ON_BAND + E + b"[0;" + WINE + b"m " + BAND_TEXT + b"Bana"),
+                         ("the input box's mark white", row_at(86, 5) + INPUT_MARK_WHITE)):
         failures += check(f"grok band recording: {what}", needle in whole)
     failures += check("grok band recording: Grok's characters all kept", all(
         stream.count(c.encode()) <= whole.count(c.encode()) for c in "❯│╭╰─"))

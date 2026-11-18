@@ -28,6 +28,8 @@
 #define PROMPT_MARK_COLOUR "250;252;255" /* #fafcff, foot's bright7 */
 #define INPUT_MARK "\u276f"              /* the input row: the program's own mark */
 #define SENT_MARK "\u25b6"               /* the user's sent rows */
+/* Grok's mark on its band takes the sent mark in this colour; its input mark takes PROMPT_MARK_COLOUR (2026-11-18). */
+#define SENT_MARK_COLOUR "250;252;255" /* #fafcff */
 
 /*
  * The text typed into Claude Code's input box (the author, 2026-11-10). The program gives it no colour,
