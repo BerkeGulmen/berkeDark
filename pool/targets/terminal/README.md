@@ -93,6 +93,12 @@ For programs other than Claude Code (made for Qwen Code, 2026-11-18):
   the place of the terminal's cursor. On the full screen berkeDark takes that ground away again, so the terminal's
   cursor shows the character; where the terminal's cursor is hidden or elsewhere when the frame ends, the cell is
   underlined in `@{base.cursor}` instead.
+- Qwen Code's OpenTUI interface draws selected text white on `#264f78`, which its theme cannot reach; berkeDark
+  writes it again on the selection ground of its pool (`@{bg:base.selection}`), in the text colour.
+- Grok's terminal theme draws the band behind your messages one small step from the terminal's background toward
+  its foreground (`#212127` with berkeDark's foot colours); berkeDark writes it again in the band of its pool
+  (`@{bg:chat.user.message}`). Grok draws that band only in terminals it asks for their colours, which foot is not:
+  see `cli/README.md`.
 
 Tested on Void Linux with foot 1.28 and Claude Code 2.1.322. Not tested: other distributions,
 other terminals and other ways of installing Claude Code. macOS and Windows are not supported.

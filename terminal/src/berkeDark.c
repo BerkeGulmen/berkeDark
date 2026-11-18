@@ -130,6 +130,8 @@ struct style {
     bool is_colour_start;  /* the program has set its text colour and printed nothing since */
     bool is_body;          /* outside Claude Code: the program's colour is exactly berkeDark's text colour, taken as plain text */
     bool is_soft_cursor;   /* outside Claude Code: the background is Qwen Code's drawn cursor, taken away on the terminal */
+    bool is_selection;     /* outside Claude Code: the background is Qwen Code's selection, written again in berkeDark's */
+    bool is_white;         /* the program's colour is exactly white (#ffffff), as on Qwen Code's selection */
 };
 
 struct screen {
@@ -181,6 +183,7 @@ static void end_word(struct screen *sc);
 static bool is_input_row(const struct screen *sc, int row);
 static void put_program_colour(const struct style *s);
 static bool has_map(const struct screen *sc);
+static void put_text(const char *text);
 static bool foreground_is_claude(void);
 
 /*
@@ -302,12 +305,21 @@ static bool is_colour_value(const char *from, const char *to, const char *wanted
 
 /* The background Qwen Code draws its own cursor with on a dark terminal (#d4d4d4), as the arguments of a style mark. */
 #define SOFT_CURSOR_GROUND "48;2;212;212;212"
+/* Qwen Code's OpenTUI interface draws selected text white on #264f78, colours its theme cannot reach. */
+#define QWEN_SELECTION_GROUND "48;2;38;79;120"
+#define QWEN_SELECTION_TEXT "38;2;255;255;255"
+/*
+ * Grok's terminal theme draws the band behind the user's messages one small step from the terminal's background
+ * toward its foreground: with berkeDark's foot colours this ground (measured on Grok 1.0.89, 2026-11-18).
+ */
+#define GROK_BAND_GROUND "48;2;33;33;39"
 
 static void apply_style_sequence(struct interpreter *in)
 {
     struct style *s = &in->style;
     const char *p = in->parameters;
-    bool colour_changed = false, takes_soft_cursor = false;
+    bool colour_changed = false, takes_soft_cursor = false, takes_selection = false, takes_white = false;
+    bool takes_band = false;
 
     for (;;) {
         const char *start = p;
@@ -343,7 +355,7 @@ static void apply_style_sequence(struct interpreter *in)
             s->program_colour = true;
             s->foreground = (int)code;
             s->is_colour_start = true;
-            s->is_body = false;
+            s->is_body = s->is_white = false;
             colour_changed = true;
             break;
         case 38: {
@@ -359,12 +371,14 @@ static void apply_style_sequence(struct interpreter *in)
             memcpy(s->extended, arguments, length);
             s->extended[length] = '\0';
             s->is_body = is_colour_value(start, p, "38" BODY_FOREGROUND) && !is_claude_now(&in->screen);
+            s->is_white = is_colour_value(start, p, QWEN_SELECTION_TEXT);
+            takes_white = s->is_white && s->is_selection;
             break;
         }
         case 39:
             s->program_colour = false;
             s->foreground = 0;
-            s->is_body = false;
+            s->is_body = s->is_white = false;
             colour_changed = true;
             break;
         case 40 ... 47:
@@ -373,7 +387,7 @@ static void apply_style_sequence(struct interpreter *in)
             s->band = false;
             s->ground = 0;
             s->ground_on = NULL;
-            s->is_soft_cursor = false;
+            s->is_soft_cursor = s->is_selection = false;
             break;
         case 48:
             s->background = true;
@@ -387,12 +401,16 @@ static void apply_style_sequence(struct interpreter *in)
                 p = skip_colour_arguments(p);
             s->is_soft_cursor = has_map(&in->screen) && !in->screen.is_claude && is_colour_value(start, p, SOFT_CURSOR_GROUND);
             takes_soft_cursor = s->is_soft_cursor;
+            s->is_selection = !in->screen.is_claude && is_colour_value(start, p, QWEN_SELECTION_GROUND) &&
+                              !is_claude_now(&in->screen);
+            takes_selection = s->is_selection;
+            takes_band = !in->screen.is_claude && is_colour_value(start, p, GROK_BAND_GROUND) && !is_claude_now(&in->screen);
             break;
         case 49:
             s->background = s->band = false;
             s->ground = 0;
             s->ground_on = NULL;
-            s->is_soft_cursor = false;
+            s->is_soft_cursor = s->is_selection = false;
             break;
         case 58:
             if (!has_subparameter)
@@ -417,6 +435,17 @@ static void apply_style_sequence(struct interpreter *in)
      */
     if (takes_soft_cursor && s->is_soft_cursor)
         put("\033[49m", 5);
+    /*
+     * Where a tool gives a theme no role, berkeDark brings the remedy: Qwen Code's selection takes berkeDark's
+     * selection ground, and its white text berkeDark's text colour; Grok's band behind the user's messages takes
+     * the band of berkeDark's pool. The program's own mark reached the terminal first; berkeDark's follows it.
+     */
+    if (takes_selection && s->is_selection)
+        put_text("\033[" SELECTION_GROUND "m");
+    if ((takes_selection || takes_white) && s->is_selection && s->is_white)
+        put_text("\033[38" BODY_FOREGROUND "m");
+    if (takes_band && s->background)
+        put_text("\033[" BAND_BACKGROUND "m");
 }
 
 /* The map of the screen. A write only ever changes the map, never the program's bytes. */

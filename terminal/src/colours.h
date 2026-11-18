@@ -148,3 +148,9 @@
  */
 #define BODY_FOREGROUND ";2;255;232;194"     /* #ffe8c2, as the arguments after 38 */
 #define CURSOR_UNDERLINE "58;2;255;158;96" /* #ff9e60, the colour of the underline */
+
+/*
+ * Qwen Code's selection (OpenTUI): white on #264f78, which its theme cannot reach. Outside Claude Code berkeDark
+ * writes the ground of its pool's selection class again, with berkeDark's text colour on it (2026-11-18).
+ */
+#define SELECTION_GROUND "48;2;37;34;97" /* #252261 */

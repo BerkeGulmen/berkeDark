@@ -585,6 +585,10 @@ NO_GROUND = E + b"[49m"
 UNDERLINED = E + b"[0;4;58;2;255;158;96m"   # the underline in the cursor's colour
 FRAME = ON_SCREEN + E + b"[?2026h" + E + b"[?25l"
 OWN_STYLE = E + b"[0 q"                      # the terminal's own cursor style, from foot.ini
+WHITE = E + b"[38;2;255;255;255m"
+QWEN_SELECTION = E + b"[48;2;38;79;120m"
+SELECTION = E + b"[48;2;37;34;97m"           # the ground of berkeDark's selection class
+GROK_BAND = E + b"[48;2;33;33;39m"
 
 OTHER_CASES = [
     # (name, taken as Claude Code's, given, wanted)
@@ -638,6 +642,21 @@ OTHER_CASES = [
     ("a block cursor on the full screen gives way too", False, ON_SCREEN + E + b"[2 q", ON_SCREEN + E + b"[2 q" + OWN_STYLE),
     ("under Claude Code a block cursor stays", True, E + b"[2 q" + ON_SCREEN + E + b"[2 q", E + b"[2 q" + ON_SCREEN + E + b"[2 q"),
     ("a private sequence with a blank stays", False, E + b"[?2 q", E + b"[?2 q"),
+    # Qwen Code's selection (OpenTUI, measured 2026-11-18): white, then the ground #264f78, then the text.
+    ("Qwen Code's selection takes berkeDark's", False, FRAME + row_at(3) + WHITE + QWEN_SELECTION + b"deneme" + E + b"[0m",
+     FRAME + row_at(3) + WHITE + QWEN_SELECTION + SELECTION + BODY + b"deneme" + E + b"[0m"),
+    ("the selection's ground first, then white", False, QWEN_SELECTION + WHITE + b"x" + E + b"[0m",
+     QWEN_SELECTION + SELECTION + WHITE + BODY + b"x" + E + b"[0m"),
+    ("the selection's ground with another text colour keeps that colour", False, E + b"[31m" + QWEN_SELECTION + b"x",
+     E + b"[31m" + QWEN_SELECTION + SELECTION + b"x"),
+    ("white without the selection stays white", False, WHITE + b"x", WHITE + b"x"),
+    ("under Claude Code the selection's ground stays", True, WHITE + QWEN_SELECTION + b"x", WHITE + QWEN_SELECTION + b"x"),
+    # Grok's band behind the user's messages in its terminal theme (measured 2026-11-18 on Grok 1.0.89).
+    ("Grok's band takes berkeDark's", False, ON_SCREEN + row_at(2) + GROK_BAND + b"x" + E + b"[49m",
+     ON_SCREEN + row_at(2) + GROK_BAND + BAND + b"x" + E + b"[49m"),
+    ("Grok's band on the normal screen too", False, GROK_BAND + b"x", GROK_BAND + BAND + b"x"),
+    ("under Claude Code that ground stays", True, GROK_BAND + b"x", GROK_BAND + b"x"),
+    ("a ground one step off stays", False, E + b"[48;2;33;33;40mx", E + b"[48;2;33;33;40mx"),
 ]
 
 

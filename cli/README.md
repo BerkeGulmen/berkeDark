@@ -70,5 +70,19 @@ Grok takes no theme file. With
 
 in `~/.grok/config.toml` it draws with the terminal's sixteen colours, which are berkeDark's when the
 terminal uses the palette in `../terminal/config/foot.ini`.
+Grok 1.0.89 also needs
 
-Tested with Qwen Code 0.27.1 and 0.28.0 (its Ink interface under Node and its OpenTUI interface under Bun) and Codex 0.167.0 on Void Linux in foot. Grok 1.0.77 was not run for this.
+    [features]
+    terminal_theme = true
+
+while the theme is being rolled out; without it `theme = "terminal"` falls back to Grok's own theme.
+
+Measured on Grok 1.0.89 (2026-11-18), through berkeDark's colour interpreter: headings, bold, slanted and
+struck text, inline code, links, quotes, lists, task boxes, tables, code and diffs take the palette's sixteen
+colours, and Grok leaves the terminal's cursor alone. The band behind your own messages Grok draws only in
+terminals it asks for their colours; it does not ask foot (it knows it by `TERM=foot`), so in foot your
+messages are bold, with no band. When Grok draws the band, the interpreter turns it into berkeDark's wine
+(`#260307`). To have the band in foot, start Grok with `TERM=xterm-256color`; Grok then also leaves out its
+query for the keyboard protocol foot speaks, so try it before keeping it.
+
+Tested with Qwen Code 0.27.1 and 0.28.0 (its Ink interface under Node and its OpenTUI interface under Bun), Codex 0.167.0 and Grok 1.0.89 (answered by a local stand-in endpoint, no account) on Void Linux in foot.
