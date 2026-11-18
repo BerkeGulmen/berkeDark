@@ -3,6 +3,9 @@
 The files here are written from the pool (`../pool`), like every other file of berkeDark that carries a
 colour. Each tool takes the classes it can show; what it cannot show is listed below.
 
+`../berkedark install qwen codex grok` places these files and sets the settings below for you, keeping what
+it replaces (see the README). The steps here are the same by hand.
+
 ## Claude Code
 
 See `../terminal`: a theme file and the colour interpreter, set up with one command.

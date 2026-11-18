@@ -12,6 +12,7 @@ All notable changes to the "berkeDark" extension will be documented in this file
 - Terminal colour interpreter, outside Claude Code: Qwen Code's own drawn cursor (a light grey cell) gives way to the terminal's cursor, or to an underline in the cursor's colour; a request for a block cursor is followed by the terminal's own cursor style
 
 ### Added
+- `berkedark`: one command that installs, checks and uninstalls berkeDark for every surface (foot and the colour interpreter, Claude Code, Qwen Code, Codex, Grok, oh-my-zsh), keeps every file it touches, changes only berkeDark's own keys in settings files, and writes the files from the pool with the user's changes in `~/.config/berkeDark/berkeDark.toml`; tested by `tests/installer.sh`
 - `cli/qwen/reapply-diff-color-patch.py`: makes Qwen Code's ```diff blocks readable with a custom theme (to be run again after each Qwen Code update)
 
 ## [1.3.0] - 2026-11-10

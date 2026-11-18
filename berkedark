@@ -1,0 +1,589 @@
+#!/usr/bin/env python3
+"""berkeDark's installer: one command for every surface berkeDark covers.
+
+    ./berkedark install [TARGET ...]     install the targets (all when none is named)
+    ./berkedark uninstall [TARGET ...]   put back every file as it was before berkeDark touched it
+    ./berkedark status                   what berkeDark has installed, file by file
+    ./berkedark settings                 create your settings file, with commented examples
+    ./berkedark qwen-diff-patch [ARGS]   the separate, explicit patch for Qwen Code's diff blocks
+                                         (ARGS: --dry-run, --restore, --root DIR; see cli/README.md)
+
+    --dry-run (with install or uninstall) says what would change and changes nothing.
+
+Targets: terminal (foot's palette and berkeDark's colour interpreter), claude (Claude Code's theme), qwen
+(Qwen Code's theme), codex (Codex's theme), grok (Grok's settings), ohmyzsh (the prompt), vscode (a note:
+the VS Code theme comes from the Marketplace).
+
+berkeDark is a thing that fixes every surface on its own: where a tool gives a theme no role, berkeDark
+supplies the remedy. This installer only places berkeDark's files and sets the few settings that switch them
+on. For every file it touches it keeps the file as it was (once, in ~/.local/state/berkeDark), changes in a
+settings file only the keys berkeDark owns, checks the result, and can put everything back.
+
+Your settings file, ~/.config/berkeDark/berkeDark.toml, may change colours of berkeDark's pool (the single
+source of all its colours); every install writes berkeDark's files from the pool with your changes first.
+Needs Python 3.11 or later; the terminal target needs clang.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+try:
+    import tomllib
+except ImportError:  # Python older than 3.11
+    tomllib = None
+
+REPO = Path(__file__).resolve().parent
+HOME = Path.home()
+TARGETS = ["terminal", "claude", "qwen", "codex", "grok", "ohmyzsh", "vscode"]
+STATE = Path(os.environ.get("XDG_STATE_HOME") or HOME / ".local/state") / "berkeDark"
+CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or HOME / ".config")
+SETTINGS_FILE = CONFIG / "berkeDark" / "berkeDark.toml"
+
+SETTINGS_TEMPLATE = '''# berkeDark: your own changes to berkeDark's colours.
+#
+# berkeDark's colours all come from one pool (pool/pool.json in berkeDark's folder): a palette of named
+# colours, and classes (what a colour is used for) that name palette colours. Change either here, then run
+#     ./berkedark install
+# and every berkeDark file is written again with your changes. Remove a line to go back to berkeDark's own.
+# The class names and their meaning are in pool/pool.json ("roles"); `python3 pool/tools/pool.py list` lists them.
+
+[palette]
+# A palette colour by name, as #rrggbb. Every class that names it follows.
+# cream = "#fff0d6"        # the text colour (berkeDark: #ffe8c2)
+# navy = "#060c1a"         # the canvas (berkeDark: #070f1f)
+
+[roles]
+# A class: fg (text colour) and bg (ground) name a palette colour or give #rrggbb; style lists bold, italic,
+# underline, strike.
+# "prose.number" = { fg = "pink" }                 # numbers standing alone in a reply (berkeDark: magenta)
+# "chat.user.input.text" = { fg = "#00ff00" }      # the text you type in Claude Code's input box
+# "prose.heading.line" = { fg = "gold", style = ["bold"] }
+'''
+
+
+# ---------------------------------------------------------------- the record of what berkeDark changed
+
+class Record:
+    """manifest.json: for each file berkeDark wrote, whether it existed, where its old bytes are kept, and the
+    hash of what berkeDark wrote; and the folders berkeDark created."""
+
+    def __init__(self, dry: bool):
+        self.dry = dry
+        self.path = STATE / "manifest.json"
+        self.data = {"files": {}, "dirs": {}, "state_dirs": []}
+        if self.path.exists():
+            self.data = json.loads(self.path.read_text(encoding="utf-8"))
+        else:  # the folders made for the record go again with the last uninstall
+            p = STATE.parent
+            while not p.exists():
+                self.data["state_dirs"].append(str(p))
+                p = p.parent
+
+    def save(self):
+        if self.dry:
+            return
+        STATE.mkdir(parents=True, exist_ok=True)
+        tmp = self.path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(self.data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        os.replace(tmp, self.path)
+
+    def ensure_dir(self, target: str, folder: Path):
+        missing = []
+        p = folder
+        while not p.exists():
+            missing.append(p)
+            p = p.parent
+        if self.dry:
+            return
+        for d in reversed(missing):
+            d.mkdir()
+            self.data["dirs"].setdefault(str(d), target)
+
+    def write(self, target: str, path: Path, data: bytes, mode: int | None = None, what: str = "") -> str:
+        """Writes data to path, keeping the old file the first time. Returns created, changed or unchanged."""
+        key = str(path)
+        old = path.read_bytes() if path.exists() else None
+        if old == data and key in self.data["files"]:
+            return "unchanged"
+        if old == data:
+            # Already as wanted, though not by berkeDark's hand: recorded so that uninstall leaves it as found.
+            entry = {"target": target, "existed": True, "backup": None, "written": sha(data)}
+            if not self.dry:
+                self.data["files"][key] = entry
+            return "unchanged"
+        if key not in self.data["files"]:
+            entry = {"target": target, "existed": old is not None, "backup": None}
+            if old is not None and not self.dry:
+                backups = STATE / "backups"
+                backups.mkdir(parents=True, exist_ok=True)
+                name = hashlib.sha256(key.encode()).hexdigest()[:16] + "-" + path.name
+                shutil.copy2(path, backups / name)
+                entry["backup"] = name
+            if not self.dry:
+                self.data["files"][key] = entry
+        if self.dry:
+            return "would change" if old is not None else "would create"
+        self.ensure_dir(target, path.parent)
+        atomic_write(path, data, mode if mode is not None else (path.stat().st_mode & 0o7777 if old is not None else 0o644))
+        self.data["files"][key]["written"] = sha(data)
+        return "changed" if old is not None else "created"
+
+
+def sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def atomic_write(path: Path, data: bytes, mode: int):
+    handle, tmp = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
+    try:
+        with os.fdopen(handle, "wb") as out:
+            out.write(data)
+        os.chmod(tmp, mode)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
+def say(state: str, path: Path | str, note: str = ""):
+    print(f"  {state:<13} {path}{('  (' + note + ')') if note else ''}")
+
+
+# ---------------------------------------------------------------- the pool, with the user's changes
+
+def build_tree(work: Path) -> Path:
+    """A copy of berkeDark's sources in work, its files written from the pool with the user's settings applied."""
+    tree = work / "tree"
+    shutil.copytree(REPO / "pool", tree / "pool", ignore=shutil.ignore_patterns("build", "__pycache__"))
+    shutil.copytree(REPO / "terminal", tree / "terminal", ignore=shutil.ignore_patterns("build", "__pycache__"))
+    shutil.copytree(REPO / "cli", tree / "cli", ignore=shutil.ignore_patterns("__pycache__"))
+    if SETTINGS_FILE.exists():
+        apply_settings(tree / "pool" / "pool.json")
+    done = subprocess.run([sys.executable, str(tree / "pool/tools/generate.py")], capture_output=True, text=True)
+    if done.returncode != 0:
+        raise SystemExit("berkeDark: writing the files from the pool failed:\n" + done.stdout + done.stderr)
+    return tree
+
+
+HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def apply_settings(pool_file: Path):
+    if tomllib is None:
+        raise SystemExit("berkeDark: reading your settings file needs Python 3.11 or later")
+    try:
+        settings = tomllib.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as error:
+        raise SystemExit(f"berkeDark: {SETTINGS_FILE} is not valid TOML: {error}")
+    pool = json.loads(pool_file.read_text(encoding="utf-8"))
+    unknown = set(settings) - {"palette", "roles"}
+    if unknown:
+        raise SystemExit(f"berkeDark: {SETTINGS_FILE}: unknown sections {sorted(unknown)}; only [palette] and [roles]")
+    changes = []
+    for name, value in settings.get("palette", {}).items():
+        if not isinstance(value, str) or not HEX.match(value):
+            raise SystemExit(f"berkeDark: {SETTINGS_FILE}: palette {name} = {value!r} is not #rrggbb")
+        entry = pool["palette"].setdefault(name, {"tr": name, "from": "the user's settings"})
+        entry["hex"] = value.lower()
+        changes.append(f"palette {name} {value.lower()}")
+    for name, value in settings.get("roles", {}).items():
+        if name not in pool["roles"]:
+            raise SystemExit(f"berkeDark: {SETTINGS_FILE}: there is no class {name!r} in the pool")
+        if not isinstance(value, dict) or set(value) - {"fg", "bg", "style"}:
+            raise SystemExit(f"berkeDark: {SETTINGS_FILE}: class {name} takes only fg, bg and style")
+        role = pool["roles"][name]
+        for side in ("fg", "bg"):
+            if side not in value:
+                continue
+            colour = value[side]
+            if isinstance(colour, str) and HEX.match(colour):
+                pool["palette"].setdefault("user-" + colour[1:].lower(), {"hex": colour.lower(), "tr": colour.lower(),
+                                                                          "from": "the user's settings"})
+                colour = "user-" + colour[1:].lower()
+            if colour not in pool["palette"]:
+                raise SystemExit(f"berkeDark: {SETTINGS_FILE}: class {name}: {value[side]!r} is no palette colour and no #rrggbb")
+            role[side] = colour
+        if "style" in value:
+            styles = value["style"]
+            if not isinstance(styles, list) or set(styles) - {"bold", "italic", "underline", "strike"}:
+                raise SystemExit(f"berkeDark: {SETTINGS_FILE}: class {name}: style lists bold, italic, underline, strike")
+            role["style"] = styles
+        changes.append(f"class {name}")
+    pool_file.write_text(json.dumps(pool, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"Your settings ({SETTINGS_FILE}): " + (", ".join(changes) if changes else "nothing changed"))
+
+
+# ---------------------------------------------------------------- settings files: only berkeDark's keys
+
+def merge_json(path: Path, keys: dict[tuple[str, ...], object]) -> bytes:
+    """The settings file with only the given keys set; everything else as it was. Refuses a file that is not a
+    JSON object (a file with comments, too: rewriting it would lose them)."""
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except ValueError:
+            raise Refusal(f"{path} is not plain JSON (comments?); set {fmt_keys(keys)} yourself")
+        if not isinstance(data, dict):
+            raise Refusal(f"{path} is not a JSON object")
+    else:
+        data = {}
+    before = json.loads(json.dumps(data))
+    for key, value in keys.items():
+        node = data
+        for part in key[:-1]:
+            if not isinstance(node.get(part, {}), dict):
+                raise Refusal(f"{path}: {'.'.join(key[:-1])} is not an object")
+            node = node.setdefault(part, {})
+        node[key[-1]] = value
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    check = json.loads(text)
+    for key in keys:  # everything else unchanged
+        drop(check, key)
+        drop(before, key)
+    if strip_empty(check) != strip_empty(before):
+        raise Refusal(f"{path}: merging would change more than berkeDark's keys")
+    return text.encode()
+
+
+def drop(node: dict, key: tuple[str, ...]):
+    for part in key[:-1]:
+        node = node.get(part, {})
+        if not isinstance(node, dict):
+            return
+    node.pop(key[-1], None)
+
+
+def strip_empty(node):
+    if isinstance(node, dict):
+        return {k: strip_empty(v) for k, v in node.items() if not (isinstance(v, dict) and not strip_empty(v))}
+    return node
+
+
+def fmt_keys(keys) -> str:
+    return ", ".join(".".join(k) + " = " + json.dumps(v) for k, v in keys.items())
+
+
+def toml_value(value) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return json.dumps(value)
+
+
+def merge_toml(path: Path, keys: dict[tuple[str, str], object]) -> bytes:
+    """The TOML file with only [section] key = value set for the given keys, edited line by line so that
+    comments and order stay; checked by parsing before and after."""
+    if tomllib is None:
+        raise Refusal(f"editing {path} needs Python 3.11 or later; set {fmt_keys(keys)} yourself")
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    try:
+        before = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as error:
+        raise Refusal(f"{path} is not valid TOML ({error}); set {fmt_keys(keys)} yourself")
+    lines = text.splitlines()
+    for (section, key), value in keys.items():
+        current = before.get(section)
+        if current is not None and not isinstance(current, dict):
+            raise Refusal(f"{path}: {section} is not a table")
+        header = re.compile(r"^\s*\[\s*" + re.escape(section) + r"\s*\]\s*(#.*)?$")
+        starts = [i for i, line in enumerate(lines) if header.match(line)]
+        line_text = f"{key} = {toml_value(value)}"
+        if not starts:
+            if current is not None:  # the table is written another way (dotted keys, inline): not ours to rewrite
+                raise Refusal(f"{path}: {section} is not written as a [{section}] table; set {section}.{key} yourself")
+            if lines and lines[-1].strip():
+                lines.append("")
+            lines += [f"[{section}]", line_text]
+            continue
+        start = starts[0]
+        end = next((i for i in range(start + 1, len(lines)) if re.match(r"^\s*\[", lines[i])), len(lines))
+        key_line = re.compile(r"^\s*" + re.escape(key) + r"\s*=")
+        found = [i for i in range(start + 1, end) if key_line.match(lines[i])]
+        if found:
+            lines[found[0]] = line_text
+        else:
+            at = end
+            while at > start + 1 and not lines[at - 1].strip():
+                at -= 1
+            lines.insert(at, line_text)
+    out = "\n".join(lines) + "\n"
+    try:
+        after = tomllib.loads(out)
+    except tomllib.TOMLDecodeError as error:
+        raise Refusal(f"{path}: the edited file would not be valid TOML ({error}); nothing changed")
+    for (section, key), value in keys.items():
+        if after.get(section, {}).get(key) != value:
+            raise Refusal(f"{path}: {section}.{key} did not take the value; nothing changed")
+        after.get(section, {}).pop(key, None)
+        if section in before:
+            before[section].pop(key, None)
+    if strip_empty(after) != strip_empty(before):
+        raise Refusal(f"{path}: editing would change more than berkeDark's keys; nothing changed")
+    return out.encode()
+
+
+class Refusal(Exception):
+    pass
+
+
+# ---------------------------------------------------------------- the targets
+
+def install_terminal(tree: Path, record: Record):
+    print("terminal: berkeDark's colour interpreter and foot's palette")
+    cc = os.environ.get("CC", "clang")
+    if shutil.which(cc) is None:
+        say("NOT DONE", "~/.local/bin/berkeDark", f"{cc} was not found; install clang or set CC")
+    else:
+        done = subprocess.run(["sh", str(tree / "terminal/build.sh")], capture_output=True, text=True)
+        if done.returncode != 0:
+            say("NOT DONE", "~/.local/bin/berkeDark", "the build failed: " + (done.stderr or done.stdout).strip()[:200])
+        else:
+            path = HOME / ".local/bin/berkeDark"
+            say(record.write("terminal", path, (tree / "terminal/build/berkeDark").read_bytes(), 0o755), path)
+    if shutil.which("foot") is None and not (CONFIG / "foot").exists():
+        say("skipped", CONFIG / "foot", "foot is not installed; run programs as: berkeDark PROGRAM")
+        return
+    foot_dir = CONFIG / "foot"
+    login_shell = os.environ.get("SHELL", "/bin/sh")
+    try:
+        import pwd
+        login_shell = pwd.getpwuid(os.getuid()).pw_shell or login_shell
+    except (ImportError, KeyError):
+        pass
+    ini = (tree / "terminal/config/foot.ini").read_text(encoding="utf-8")
+    ini = "\n".join(line.replace("/bin/zsh", login_shell) if line.startswith("shell=") else line for line in ini.splitlines()) + "\n"
+    own = foot_dir / "berkeDark.ini"
+    say(record.write("terminal", own, ini.encode()), own)
+    main = foot_dir / "foot.ini"
+    include = f"include={own}"
+    text = main.read_text(encoding="utf-8") if main.exists() else ""
+    if include in text.splitlines():
+        record.write("terminal", main, text.encode())
+        say("unchanged", main)
+        return
+    new = text + ("" if not text or text.endswith("\n") else "\n") + f"\n[main]\n{include}\n"
+    if shutil.which("foot") and not record.dry:
+        with tempfile.NamedTemporaryFile("w", suffix=".ini", dir=foot_dir, delete=False) as probe:
+            probe.write(new)
+        ok = subprocess.run(["foot", "-c", probe.name, "--check-config"], capture_output=True).returncode == 0
+        os.remove(probe.name)
+        if not ok:
+            say("NOT CHANGED", main, "foot does not accept the result; nothing changed")
+            return
+    say(record.write("terminal", main, new.encode()), main, "one include line")
+
+
+def check_qwen_theme(data: bytes):
+    theme = json.loads(data)
+
+    def walk(value, where):
+        if isinstance(value, dict):
+            for k, v in value.items():
+                walk(v, f"{where}.{k}")
+        elif isinstance(value, list):
+            if not value:
+                raise Refusal(f"Qwen Code theme: {where} is empty")
+            for i, v in enumerate(value):
+                walk(v, f"{where}[{i}]")
+        elif not (isinstance(value, str) and value.strip()):
+            raise Refusal(f"Qwen Code theme: {where} is empty; Qwen Code would drop it silently")
+    walk(theme, "theme")
+
+
+def install_claude(tree: Path, record: Record):
+    print("claude: Claude Code's theme")
+    folder = Path(os.environ.get("CLAUDE_CONFIG_DIR") or HOME / ".claude")
+    theme = folder / "themes/berkedark.json"
+    say(record.write("claude", theme, (tree / "terminal/config/claude-theme.json").read_bytes()), theme)
+    settings = folder / "settings.json"
+    keys = {("theme",): "custom:berkedark", ("tui",): "fullscreen"}
+    say(record.write("claude", settings, merge_json(settings, keys)), settings, fmt_keys(keys))
+
+
+def install_qwen(tree: Path, record: Record):
+    print("qwen: Qwen Code's theme")
+    folder = Path(os.environ.get("QWEN_HOME") or HOME / ".qwen")
+    theme = folder / "berkeDark.json"
+    data = (tree / "cli/qwen/berkeDark.json").read_bytes()
+    check_qwen_theme(data)
+    if not str(theme.resolve()).startswith(str(HOME.resolve()) + os.sep):
+        raise Refusal(f"{theme} is not inside your home folder; Qwen Code loads a theme file only from there")
+    say(record.write("qwen", theme, data), theme)
+    settings = folder / "settings.json"
+    keys = {("ui", "theme"): str(theme)}
+    say(record.write("qwen", settings, merge_json(settings, keys)), settings, fmt_keys(keys))
+    print("  note          ```diff blocks need a separate, explicit step: ./berkedark qwen-diff-patch --dry-run")
+
+
+def install_codex(tree: Path, record: Record):
+    print("codex: Codex's theme")
+    folder = Path(os.environ.get("CODEX_HOME") or HOME / ".codex")
+    theme = folder / "themes/berkedark.tmTheme"
+    say(record.write("codex", theme, (tree / "cli/codex/berkedark.tmTheme").read_bytes()), theme)
+    config = folder / "config.toml"
+    keys = {("tui", "theme"): "berkedark"}
+    say(record.write("codex", config, merge_toml(config, keys)), config, "[tui] theme")
+
+
+def install_grok(tree: Path, record: Record):
+    print("grok: Grok's settings (it takes the terminal's sixteen colours)")
+    config = HOME / ".grok/config.toml"
+    keys = {("ui", "theme"): "terminal", ("features", "terminal_theme"): True}
+    say(record.write("grok", config, merge_toml(config, keys)), config, "[ui] theme, [features] terminal_theme")
+
+
+def install_ohmyzsh(tree: Path, record: Record):
+    print("ohmyzsh: the berkeDark prompt")
+    zsh = Path(os.environ.get("ZSH") or HOME / ".oh-my-zsh")
+    if not zsh.is_dir():
+        say("skipped", zsh, "oh-my-zsh is not installed")
+        return
+    custom = Path(os.environ.get("ZSH_CUSTOM") or zsh / "custom")
+    theme = custom / "themes/berkeDark.zsh-theme"
+    say(record.write("ohmyzsh", theme, (tree / "terminal/oh-my-zsh/berkeDark.zsh-theme").read_bytes()), theme)
+    zshrc = Path(os.environ.get("ZDOTDIR") or HOME) / ".zshrc"
+    text = zshrc.read_text(encoding="utf-8") if zshrc.exists() else ""
+    lines = text.splitlines()
+    found = [i for i, line in enumerate(lines) if re.match(r"^\s*ZSH_THEME=", line)]
+    if not found:
+        say("NOT CHANGED", zshrc, 'no ZSH_THEME line; add ZSH_THEME="berkeDark" before oh-my-zsh is sourced')
+        return
+    lines[found[0]] = 'ZSH_THEME="berkeDark"'
+    new = "\n".join(lines) + ("\n" if text.endswith("\n") or not text else "")
+    say(record.write("ohmyzsh", zshrc, new.encode()), zshrc, "the ZSH_THEME line")
+
+
+def install_vscode(tree: Path, record: Record):
+    print("vscode: nothing to write")
+    print("  note          install the theme from the Marketplace: code --install-extension berkegulmen.berkedark,")
+    print("                then choose berkeDark in Preferences: Color Theme. README.md lists recommended settings.")
+
+
+INSTALLERS = {"terminal": install_terminal, "claude": install_claude, "qwen": install_qwen, "codex": install_codex,
+              "grok": install_grok, "ohmyzsh": install_ohmyzsh, "vscode": install_vscode}
+
+
+# ---------------------------------------------------------------- commands
+
+def cmd_install(targets: list[str], dry: bool) -> int:
+    record = Record(dry)
+    failed = 0
+    with tempfile.TemporaryDirectory(prefix="berkeDark-") as work:
+        tree = build_tree(Path(work))
+        for target in targets:
+            try:
+                INSTALLERS[target](tree, record)
+            except Refusal as why:
+                say("NOT CHANGED", "", str(why))
+                failed += 1
+            record.save()
+    print("Dry run: nothing was changed." if dry else
+          "Done. Open a new terminal window; windows and programs already open keep what they had.")
+    return 1 if failed else 0
+
+
+def cmd_uninstall(targets: list[str], dry: bool) -> int:
+    record = Record(dry)
+    files = record.data["files"]
+    count = 0
+    for key in sorted(k for k, v in files.items() if v["target"] in targets):
+        entry, path = files[key], Path(key)
+        current = path.read_bytes() if path.exists() else None
+        if current is not None and entry.get("written") and sha(current) != entry["written"]:
+            saved = path.with_name(path.name + ".berkeDark-before-uninstall")
+            if not dry:
+                shutil.copy2(path, saved)
+            say("saved", saved, "you changed this file after berkeDark wrote it")
+        if entry["existed"] and entry["backup"]:
+            backup = STATE / "backups" / entry["backup"]
+            if not dry:
+                atomic_write(path, backup.read_bytes(), backup.stat().st_mode & 0o7777)
+                os.utime(path, ns=(backup.stat().st_atime_ns, backup.stat().st_mtime_ns))
+                backup.unlink()
+            say("would restore" if dry else "restored", path)
+        elif entry["existed"]:
+            say("left", path, "it was already like this before berkeDark")
+        else:
+            if not dry and path.exists():
+                path.unlink()
+            say("would remove" if dry else "removed", path)
+        if not dry:
+            del files[key]
+        count += 1
+    for folder in sorted((d for d, t in record.data["dirs"].items() if t in targets), key=len, reverse=True):
+        p = Path(folder)
+        if p.is_dir() and not any(p.iterdir()):
+            if not dry:
+                p.rmdir()
+            say("would remove" if dry else "removed", p, "an empty folder berkeDark made")
+        if not dry:
+            del record.data["dirs"][folder]
+    record.save()
+    if not dry and not files and not record.data["dirs"]:
+        shutil.rmtree(STATE, ignore_errors=True)
+        for folder in record.data.get("state_dirs", []):
+            p = Path(folder)
+            if p.is_dir() and not any(p.iterdir()):
+                p.rmdir()
+    print(f"{count} files put back as they were." if not dry else "Dry run: nothing was changed.")
+    return 0
+
+
+def cmd_status() -> int:
+    record = Record(True)
+    if not record.data["files"]:
+        print("berkeDark has installed nothing (no record in " + str(STATE) + ").")
+        return 0
+    for key, entry in sorted(record.data["files"].items()):
+        path = Path(key)
+        state = "missing" if not path.exists() else (
+            "as installed" if sha(path.read_bytes()) == entry.get("written") else "changed since")
+        print(f"  {entry['target']:<9} {state:<13} {key}")
+    return 0
+
+
+def cmd_settings() -> int:
+    if SETTINGS_FILE.exists():
+        print(f"Your settings file is already there: {SETTINGS_FILE}")
+        return 0
+    SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS_FILE.write_text(SETTINGS_TEMPLATE, encoding="utf-8")
+    print(f"Created {SETTINGS_FILE}: change a colour there, then run ./berkedark install")
+    return 0
+
+
+def main() -> int:
+    if sys.argv[1:2] == ["qwen-diff-patch"]:  # its arguments go to the patch as they are
+        return subprocess.run([sys.executable, str(REPO / "cli/qwen/reapply-diff-color-patch.py"), *sys.argv[2:]]).returncode
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], epilog=__doc__.split("\n\n", 1)[1],
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("command", choices=["install", "uninstall", "status", "settings", "qwen-diff-patch"])
+    parser.add_argument("targets", nargs="*", help="targets (all when none is named); for qwen-diff-patch its arguments")
+    parser.add_argument("--dry-run", action="store_true", help="say what would change; change nothing")
+    args, rest = parser.parse_known_args()
+    if rest:
+        parser.error(f"unknown arguments {rest}")
+    unknown = [t for t in args.targets if t not in TARGETS]
+    if unknown:
+        parser.error(f"unknown targets {unknown}; the targets are {', '.join(TARGETS)}")
+    targets = args.targets or TARGETS
+    if args.command == "install":
+        return cmd_install(targets, args.dry_run)
+    if args.command == "uninstall":
+        return cmd_uninstall(targets, args.dry_run)
+    if args.command == "status":
+        return cmd_status()
+    return cmd_settings()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -34,6 +34,52 @@ A complete dark environment built around the deep blue of the ocean. One look fo
 
 ## Installation
 
+berkeDark is a thing that fixes every surface on its own: where a tool gives a theme no role, berkeDark
+supplies the remedy (its colour interpreter in the terminal, a theme file, a setting).
+
+### One command
+
+On Linux, from this folder (needs Python 3.11 or later; the terminal part also needs clang):
+
+```sh
+./berkedark install                 # everything: terminal (foot and the colour interpreter), claude, qwen, codex, grok, ohmyzsh
+./berkedark install qwen codex      # only these
+./berkedark install --dry-run       # say what would change, change nothing
+./berkedark status                  # what is installed, file by file
+./berkedark uninstall               # put every file back as it was
+```
+
+It keeps each file it touches as it was, once, in `~/.local/state/berkeDark`, and `uninstall` puts those
+back byte for byte. In a tool's settings file it changes only berkeDark's own keys (Claude Code's `theme` and
+`tui`, Qwen Code's `ui.theme`, Codex's `[tui] theme`, Grok's `[ui] theme` and `[features] terminal_theme`,
+oh-my-zsh's `ZSH_THEME`) and leaves every other line; a file it cannot edit safely (JSON with comments, a key
+written another way) it leaves alone and says what to set. It checks what it wrote (valid JSON and TOML, no
+empty colour in Qwen Code's theme, the theme inside your home folder where Qwen Code requires it, foot's
+`--check-config`). Running it again changes nothing. The patch for Qwen Code's ```diff blocks changes Qwen
+Code's own files, so it is never part of `install`: it is a step of its own, `./berkedark qwen-diff-patch`
+(see `cli/README.md`).
+
+### Your own colours
+
+```sh
+./berkedark settings                # creates ~/.config/berkeDark/berkeDark.toml with commented examples
+```
+
+In that file you can change a colour of berkeDark's palette, or the colour of one class (what a colour is
+used for, from `pool/pool.json`):
+
+```toml
+[palette]
+cream = "#fff0d6"                              # the text colour, everywhere
+
+[roles]
+"prose.number" = { fg = "pink" }               # numbers standing alone in a reply
+"chat.user.input.text" = { fg = "#00ff00" }    # what you type in Claude Code
+```
+
+`./berkedark install` then writes every berkeDark file from the pool with your changes and installs them.
+Remove a line to go back to berkeDark's own colour.
+
 ### VS Code
 1. Open **Extensions** sidebar (`Ctrl+Shift+X`)
 2. Search for `berkeDark`
