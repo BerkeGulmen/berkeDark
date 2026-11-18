@@ -2,22 +2,29 @@
 
 All notable changes to the "berkeDark" extension will be documented in this file.
 
-## [Unreleased]
-
-### Fixed
-- Qwen Code: the theme names berkeDark's text colour; with an empty one Qwen Code's OpenTUI interface drew text in its own grey (`#cdd6f4`)
-- Terminal colour interpreter, outside Claude Code: text in exactly berkeDark's text colour counts as plain text (numbers, dates, styles)
-- Terminal colour interpreter, under Grok: the user's messages stand on berkeDark's band (Grok draws none in foot), numbers and dates on it keep their colours; Grok's code and diff blocks take the pool's classes (numbers magenta, keywords sky, the added row green), also across empty lines; the diff of an edit stands on the diff grounds; headings, inline code, paths, links, addresses, list marks, task boxes, quotes and tables take the pool's classes as in Claude Code; `TERM` stays as it is
-- Terminal colour interpreter, outside Claude Code: Qwen Code's selection (white on `#264f78`, not themable) takes berkeDark's selection ground; Grok's band behind the user's messages takes berkeDark's band (`#260307`)
-- Terminal colour interpreter, outside Claude Code: Qwen Code's own drawn cursor (a light grey cell) gives way to the terminal's cursor, or to an underline in the cursor's colour; a request for a block cursor is followed by the terminal's own cursor style
+## [1.4.0] - 2026-11-18
 
 ### Added
-- `berkedark`: one command that installs, checks and uninstalls berkeDark for every surface (foot and the colour interpreter, Claude Code, Qwen Code, Codex, Grok, oh-my-zsh), keeps every file it touches, changes only berkeDark's own keys in settings files, and writes the files from the pool with the user's changes in `~/.config/berkeDark/berkeDark.toml`; tested by `tests/installer.sh`
-  - uninstall gives back only berkeDark's keys in a settings file, so what the tools wrote since (Codex's project trust, a sign-in, a model) stays; a file untouched since comes back byte for byte; a file changed since is first saved beside it with the date and time in its name
-  - a file it cannot put back (its folder removed, read-only) is named and the others are still done; the record is saved after every file, and a kept copy goes only once the record no longer names it
-  - files reached through symbolic links stay links, hard-linked files stay linked; CRLF line ends, the file's mode and JSON indentation are kept; new files follow the umask; read-only and non-UTF-8 files are refused with a message; a damaged record gives a message, not a traceback; a missing compiler gives a failing status
-  - foot: berkeDark's include carries only its colours, its cursor and the line that starts the user's own shell (foot.ini's `shell=`, else `$SHELL`) inside the colour interpreter; no font, padding or scrollback; a foot.ini it creates includes the system's first
-- `cli/qwen/reapply-diff-color-patch.py`: makes Qwen Code's ```diff blocks readable with a custom theme (to be run again after each Qwen Code update); it finds first the copy the `qwen` command runs, also looks in Bun's, pnpm's and Volta's folders, reports a copy it cannot change and goes on, and leaves no copy behind when its check fails
+- `berkedark`: one command that installs, checks and uninstalls berkeDark for every surface (foot and the colour interpreter, Claude Code, Qwen Code, Codex, Grok, oh-my-zsh). It changes only berkeDark's own keys in settings files, checks what it wrote (valid JSON and TOML, foot's `--check-config`), changes nothing on a second run, and has `--dry-run` and `status`; tested by `tests/installer.sh`
+- A settings file of your own, `~/.config/berkeDark/berkeDark.toml` (`./berkedark settings`): change a palette colour or the colour of one class, and every install writes berkeDark's files from the pool with your changes
+- What uninstall guarantees:
+  - every file it touches is kept as it was, once, the first time it changes it; a file untouched since the install comes back byte for byte, a file berkeDark placed goes
+  - in a settings file only berkeDark's keys go back to what they were, so what the tools wrote since (Codex's project trust, a sign-in, a model) stays, and a key you changed yourself stays as you set it; a settings file berkeDark made goes only when nothing else is left in it
+  - a file changed since the install is saved beside it first, with the date and time in its name
+  - a file it cannot put back (its folder removed, read-only) is named, the others are still done, and running uninstall again finishes; the record is saved after every file, and a kept copy goes only once the record no longer names it
+  - links stay links (symbolic and hard), line ends, modes and JSON indentation are kept, new files follow the umask; read-only, non-UTF-8 and mixed line-end files are left alone with a message
+- foot: berkeDark's include carries only its colours, its cursor and the line that starts your own shell (foot.ini's `shell=`, also in a file it includes, else `$SHELL`) inside the colour interpreter; no font, padding or scrollback, and a `foot.ini` it creates includes the system's first
+- `cli/qwen/reapply-diff-color-patch.py` (`./berkedark qwen-diff-patch`): makes Qwen Code's ```diff blocks readable with a custom theme; it finds first the copy the `qwen` command runs, keeps the original, checks the result with `node --check`, and is run again after each Qwen Code update
+- README: before-and-after pictures for Qwen Code and Grok
+
+### Fixed
+- Qwen Code: the theme names berkeDark's text colour as Foreground; with an empty one Qwen Code's OpenTUI interface drew text in its own grey (`#cdd6f4`)
+- Qwen Code, through the colour interpreter: its own drawn cursor (a light grey cell) gives way to the terminal's orange cursor, or to an underline in the cursor's colour; a request for a block cursor is followed by the terminal's own cursor style
+- Qwen Code, through the colour interpreter: its selection (white on `#264f78`, not themable) takes berkeDark's selection ground (`#252261`) with the text colour
+- Grok, through the colour interpreter: your messages stand on berkeDark's band (`#260307`) inside its box, as under Claude Code; their words are turquoise (`#6fdcf0`), the sent mark is the white `▶`, numbers and dates keep their colours
+- Grok: what you type in the input box is spring green (`#3fff7f`), and its secondary text (notices such as "Worked for", status and key hints, the input box's hint) takes the faint grey (`#6e7380`) instead of a faint cream
+- Grok: code and diff blocks take the pool's classes (numbers magenta, keywords sky, the added row green), also across empty lines; the diff of an edit stands on the diff grounds; headings, inline code, paths, links, list marks, task boxes, quotes and tables take the pool's classes as in Claude Code; `TERM` stays as it is
+- Terminal colour interpreter, outside Claude Code: text in exactly berkeDark's text colour counts as plain text (numbers, dates, styles)
 
 ## [1.3.0] - 2026-11-10
 

@@ -32,6 +32,29 @@ A complete dark environment built around the deep blue of the ocean. One look fo
 | Parameters    | `#ff9e60` |
 | Comments      | `#707070` |
 
+## Before and after
+berkeDark brings its remedies where a tool's own theme cannot reach.
+
+**Qwen Code**: text in berkeDark's cream, numbers in their colour, and the terminal's own orange cursor in place of the grey cell Qwen Code draws.
+
+![Qwen Code before and after](./qwen-ink-before-after.png)
+
+**Qwen Code**: selected text on berkeDark's selection ground instead of the fixed white on `#264f78`.
+
+![Qwen Code selection before and after](./qwen-selection.png)
+
+**Grok**: your message on berkeDark's band, inside its box, in turquoise.
+
+![Grok band before and after](./grok-band-box.png)
+
+**Grok**: what you type in the input box, in spring green.
+
+![Grok input before and after](./grok-input.png)
+
+**Grok**: notices and hints in berkeDark's faint grey instead of a faint cream.
+
+![Grok secondary text before and after](./grok-secondary-grey.png)
+
 ## Installation
 
 berkeDark is a thing that fixes every surface on its own: where a tool gives a theme no role, berkeDark
