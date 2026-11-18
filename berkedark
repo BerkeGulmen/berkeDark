@@ -122,6 +122,13 @@ def split_lines(text: str) -> tuple[list[str], str, bool]:
     return lines, nl, final
 
 
+def refuse_mixed(path: Path, text: str):
+    """A file edited line by line must end its lines one way: berkeDark would not guess which way is meant."""
+    crlf = text.count("\r\n")
+    if crlf and crlf != text.count("\n"):
+        raise Refusal(f"{path} ends its lines both ways (LF and CRLF); berkeDark leaves it as it is")
+
+
 def atomic_write(path: Path, data: bytes, mode: int):
     handle, tmp = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
     try:
@@ -497,7 +504,8 @@ def merge_toml(path: Path, keys: dict[tuple[str, str], object]) -> tuple[bytes, 
     comments, order and line ends stay; checked by parsing before and after."""
     text = read_text(path) if path.exists() else ""
     before = load_toml(path, text, keys)
-    lines, nl, _ = split_lines(text)
+    refuse_mixed(path, text)
+    lines, nl, final = split_lines(text)
     records = {}
     for (section, key), value in keys.items():
         current = before.get(section)
@@ -525,7 +533,7 @@ def merge_toml(path: Path, keys: dict[tuple[str, str], object]) -> tuple[bytes, 
             while at > start + 1 and not lines[at - 1].strip():
                 at -= 1
             lines.insert(at, line_text)
-    out = nl.join(lines) + nl
+    out = nl.join(lines) + (nl if final else "")
     try:
         after = tomllib.loads(out)
     except tomllib.TOMLDecodeError as error:
@@ -628,8 +636,13 @@ UNMERGE = {"json": unmerge_json, "toml": unmerge_toml, "line": unmerge_line, "bl
 
 # ---------------------------------------------------------------- the targets
 
-def foot_shell(text: str) -> str | None:
-    """The last shell= of the [main] section of a foot.ini, or None."""
+class Unclear(Exception):
+    """berkeDark cannot tell the user's foot shell= for sure."""
+
+
+def foot_shell(text: str, own: Path, seen: tuple = ()) -> str | None:
+    """The shell= foot takes from a foot.ini and the files it includes (berkeDark's own include left out): the
+    last one in reading order, in a [main] section, or None. Unclear when an include cannot be read."""
     section, value = "main", None
     for line in text.splitlines():
         line = line.strip()
@@ -640,9 +653,26 @@ def foot_shell(text: str) -> str | None:
             section = header.group(1)
             continue
         name, equals, rest = line.partition("=")
-        if section == "main" and equals and name.strip() == "shell":
-            value = re.sub(r"\s+#.*$", "", rest).strip()
+        if not equals:
+            continue
+        rest = re.sub(r"\s+#.*$", "", rest).strip()
+        if name.strip() == "include":  # foot reads it there and then, starting in [main]
+            path = Path(os.path.expanduser(rest))
+            if path == own:
+                continue
+            if not path.is_absolute() or path in seen or len(seen) > 8:
+                raise Unclear(f"the include {rest} cannot be followed")
+            try:
+                inner = foot_shell(path.read_bytes().decode("utf-8"), own, seen + (path,))
+            except (OSError, UnicodeDecodeError) as error:
+                raise Unclear(f"the include {rest} cannot be read ({error})")
+            value = inner if inner is not None else value
+        elif section == "main" and name.strip() == "shell":
+            value = rest
     return value
+
+
+SHELL_SPECIAL = set("$;|&`'\"\\<>()*?")
 
 
 def login_shell() -> str:
@@ -695,26 +725,37 @@ def install_terminal(tree: Path, record: Record) -> int:
     ini, note = [], None
     for line in read_text(tree / "terminal/config/foot.ini").splitlines():
         if line.startswith("shell="):
-            theirs = foot_shell(text or "")
+            try:
+                theirs = foot_shell(text or "", own)
+            except Unclear as why:
+                note = f"{why}, so berkeDark leaves the shell alone; run programs as: berkeDark PROGRAM"
+                continue
+            shell = theirs or login_shell()
             if theirs and "berkeDark" in theirs:  # their shell= already starts the interpreter: kept as it is
                 line = "shell=" + theirs
-            elif "'" in (theirs or login_shell()):
-                note = "foot.ini's shell= has quotes, so berkeDark leaves the shell alone; run programs as: berkeDark PROGRAM"
+            elif SHELL_SPECIAL & set(shell):  # it would go through sh, which would read those characters
+                note = (f"the shell {shell!r} has characters sh would read ($ ; | & ` quotes and the like), so berkeDark"
+                        " leaves the shell alone; run programs as: berkeDark PROGRAM")
                 continue
             else:
-                line = line.replace("@SHELL@", theirs or login_shell())
+                line = line.replace("@SHELL@", shell)
+            note = (f"your shell, {shell}, is set in berkeDark.ini; run ./berkedark install again after you change"
+                    " the shell (shell= in foot.ini, or $SHELL)")
         ini.append(line)
     ini = "\n".join(ini) + "\n"
 
+    comment = ["# berkeDark: its colours, cursor and shell= live in berkeDark.ini, written by ./berkedark install;",
+               "# run it again after you change your shell."]
     if text is not None and include in split_lines(text)[0]:
         new, added = text, []
     elif text is None:  # a new foot.ini would hide the system's one: it comes in first
         system = system_foot_ini()
-        added = ([f"include={system}", ""] if system else []) + ["[main]", include]
+        added = ([f"include={system}", ""] if system else []) + comment + ["[main]", include]
         new = "\n".join(added) + "\n"
     else:
+        refuse_mixed(main, text)
         nl = split_lines(text)[1]
-        added = ["", "[main]", include]
+        added = ["", *comment, "[main]", include]
         new = text + ("" if not text or text.endswith("\n") else nl) + nl.join(added) + nl
     if shutil.which("foot") and not record.dry:
         with tempfile.TemporaryDirectory(dir=tree.parent) as probe:
@@ -724,7 +765,9 @@ def install_terminal(tree: Path, record: Record) -> int:
         if done.returncode != 0:
             say("NOT CHANGED", main, "foot does not accept the result; nothing changed: " + (done.stderr or done.stdout).strip()[:200])
             return failed + 1
-    say(record.write("terminal", own, ini.encode()), own, note or "")
+    say(record.write("terminal", own, ini.encode()), own)
+    if note:
+        print("  note          " + note)
     say(record.write("terminal", main, new.encode(), edit=("block", {"include": {"added": added, "line": include}})),
         main, "one include line")
     return failed
@@ -803,6 +846,7 @@ def install_ohmyzsh(tree: Path, record: Record):
     custom = Path(os.environ.get("ZSH_CUSTOM") or zsh / "custom")
     theme = custom / "themes/berkeDark.zsh-theme"
     say(record.write("ohmyzsh", theme, (tree / "terminal/oh-my-zsh/berkeDark.zsh-theme").read_bytes()), theme)
+    refuse_mixed(zshrc, text)
     lines, nl, final = split_lines(text)
     found = [i for i, line in enumerate(lines) if re.match(r"^\s*ZSH_THEME=", line)]
     if not found:
@@ -886,13 +930,20 @@ def undo_file(record: Record, key: str, dry: bool) -> bool:
     # A settings file: berkeDark's keys go back one by one, unless the file is still exactly what berkeDark's
     # one change made of the copy (then the copy comes back byte for byte).
     exact = not changed and entry.get("from", "?") == (sha(old) if old is not None else None)
-    if changed:
+    linked = path.is_symlink()  # berkeDark made the file, and the user made it a link since: the link stays
+    if linked and not entry["existed"] and "keys" not in entry:
+        say("left", path, "berkeDark made it, but it is a link of yours now")
+        return True
+    if "keys" in entry and (not exact or linked):
+        # worked out first, so that a refusal leaves no saved copy behind on every try
+        new, notes = UNMERGE[entry["format"]](path, current.decode("utf-8"), entry["keys"],
+                                              not entry["existed"] and not linked)
+    if changed and not ("keys" in entry and (not exact or linked) and new is not None and new.encode() == current):
         saved = before_uninstall_name(path)
         if not dry:
             shutil.copy2(real, saved)
         say("would save" if dry else "saved", saved, "this file changed after berkeDark wrote it")
-    if "keys" in entry and not exact:
-        new, notes = UNMERGE[entry["format"]](path, current.decode("utf-8"), entry["keys"], not entry["existed"])
+    if "keys" in entry and (not exact or linked):
         if new is None:
             if not dry:
                 path.unlink()

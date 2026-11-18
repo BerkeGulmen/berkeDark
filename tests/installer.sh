@@ -215,5 +215,28 @@ QP --root $P >/dev/null 2>&1; [ $? = 1 ] && cmp -s $P/chunks/a.js $S/a16 && [ ! 
 printf 'const colors={};export const t={%s,%s};\n' "$A" "$D" > $P/chunks/a.js; chmod 555 $P/chunks
 QP --root $P > $S/o16b.txt 2>&1; st=$?; chmod 755 $P/chunks
 [ $st = 1 ] && grep -q "cannot change this copy" $S/o16b.txt && ! grep -q Traceback $S/o16b.txt; ok $? "Qwen patch: an unwritable copy is reported, no traceback"
+# 17. the shell line: noted and commented, followed through includes, left out when sh would read the value
+H=$S/h17; rm -rf $H; mkdir -p $H/.config/foot; printf 'shell=/usr/bin/fish\n' > $H/.config/foot/mine.ini
+printf 'font=x\ninclude=%s\n' "$H/.config/foot/mine.ini" > $H/.config/foot/foot.ini
+R $H install terminal > $S/o17.txt 2>&1; grep -q "berkeDark\" /usr/bin/fish; exec /usr/bin/fish'" $H/.config/foot/berkeDark.ini; ok $? "foot: a shell= in a file foot.ini includes is followed"
+grep -q "run ./berkedark install again" $S/o17.txt && grep -q "^# berkeDark: .*shell= live in berkeDark.ini" $H/.config/foot/foot.ini; ok $? "foot: a note and a comment say the shell is fixed at install"
+R $H uninstall >/dev/null 2>&1; [ "$(cat $H/.config/foot/foot.ini)" = "$(printf 'font=x\ninclude=%s' "$H/.config/foot/mine.ini")" ]; ok $? "foot: uninstall takes the comment out with the include"
+for v in 'sh -c "echo a; exec zsh"' '$HOME/bin/my shell' 'fish | tee' 'a`b`'; do
+    H=$S/h17b; rm -rf $H; mkdir -p $H/.config/foot; printf 'shell=%s\n' "$v" > $H/.config/foot/foot.ini
+    R $H install terminal > $S/o17b.txt 2>&1; ! grep -q '^shell=' $H/.config/foot/berkeDark.ini && grep -q "characters sh would read" $S/o17b.txt; ok $? "foot: shell=$v is not put through sh"
+done
+# 18. a file berkeDark made, turned into a link by the user: uninstall keeps the link and takes only its key out
+H=$S/h18; rm -rf $H; mkdir -p $H/dots; R $H install qwen >/dev/null 2>&1; mv $H/.qwen/settings.json $H/dots/qwen.json; ln -s ../dots/qwen.json $H/.qwen/settings.json
+R $H uninstall >/dev/null 2>&1; [ -L $H/.qwen/settings.json ] && [ "$(cat $H/dots/qwen.json)" = "{}" ]; ok $? "a made file now a link: the link stays, berkeDark's key goes from the file it points to"
+# 19. TOML: the final newline as the file had it; mixed line ends left as they are
+H=$S/h19; rm -rf $H; mkdir -p $H/.codex; printf '[tui]\nx = 1' > $H/.codex/config.toml
+R $H install codex >/dev/null 2>&1; [ "$(tail -c 1 $H/.codex/config.toml)" = '"' ]; ok $? "TOML without a final newline stays without one"
+R $H uninstall >/dev/null 2>&1; printf '[tui]\r\nx = 1\n[a]\nb = 2\n' > $H/.codex/config.toml; cp $H/.codex/config.toml $S/c19
+R $H install codex > $S/o19.txt 2>&1; [ $? = 1 ] && cmp -s $H/.codex/config.toml $S/c19 && grep -q "both ways" $S/o19.txt; ok $? "TOML with mixed line ends: refused, untouched"
+R $H uninstall >/dev/null 2>&1
+# 20. a settings file the user turned into JSON with comments: uninstall refuses it, without a new saved copy on every try
+H=$S/h20; rm -rf $H; mkdir -p $H/.qwen; echo '{"a": 1}' > $H/.qwen/settings.json; R $H install qwen >/dev/null 2>&1
+printf '{\n  // mine\n  "a": 1, "ui": {"theme": "x"}\n}\n' > $H/.qwen/settings.json
+R $H uninstall >/dev/null 2>&1; R $H uninstall > $S/o20.txt 2>&1; [ $? = 1 ] && grep -q "NOT RESTORED" $S/o20.txt && [ -z "$(ls $H/.qwen | grep before-uninstall)" ]; ok $? "uninstall refusing a file leaves no saved copies behind"
 echo "installer cases: $pass passed, $fail failed"
 [ $fail = 0 ]

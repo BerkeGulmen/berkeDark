@@ -70,9 +70,11 @@ saves the file beside it as `<file>.berkeDark-before-uninstall-<date>-<time>`. A
 named, the others are still done, and running `uninstall` again finishes the job.
 
 For foot, berkeDark's include (`~/.config/foot/berkeDark.ini`) carries only its colours, its cursor and the
-line that starts your shell inside the colour interpreter: the `shell=` of your `foot.ini`, else `$SHELL`,
-else `/bin/sh`, started plainly when the interpreter is missing. Your font, padding, scrollback and the rest
-stay yours. Run `install` again after you change `shell=` in `foot.ini`. A `foot.ini` that berkeDark has to
+line that starts your shell inside the colour interpreter: the `shell=` of your `foot.ini` (or of a file it
+includes), else `$SHELL`, else `/bin/sh`, started plainly when the interpreter is missing. Your font,
+padding, scrollback and the rest stay yours. The shell is fixed when you install, so run `install` again after
+you change it; a comment above the include in `foot.ini` says so. A shell command with characters `sh` would
+read (`$ ; | & `` ` `` quotes and the like) is left alone: then run programs as `berkeDark PROGRAM`. A `foot.ini` that berkeDark has to
 create starts with an include of the system's (`/etc/xdg/foot/foot.ini`), so that it hides nothing.
 
 The patch for Qwen Code's ```diff blocks changes Qwen Code's own files, so it is never part of `install`: it
