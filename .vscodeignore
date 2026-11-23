@@ -18,6 +18,8 @@ cli/**
 # before-and-after pictures: on GitHub only (the README's links reach them there)
 qwen-*.png
 grok-*.png
+claude-*.png
+codex-*.png
 # the installer and its tests need the whole repository; not part of the extension
 berkedark
 tests/**

@@ -35,6 +35,18 @@ A complete dark environment built around the deep blue of the ocean. One look fo
 ## Before and after
 berkeDark brings its remedies where a tool's own theme cannot reach.
 
+**Claude Code**: a reply in berkeDark: headings by level, numbers, links, list marks, the table header and code each in their own colour, and your message in turquoise inside its box.
+
+![Claude Code reply before and after](./claude-reply.png)
+
+**Claude Code**: an edit in berkeDark: calm grounds under the changed rows, code in berkeDark's colours, and file names and numbers picked out in the reply.
+
+![Claude Code edit before and after](./claude-diff.png)
+
+**Codex**: berkeDark's syntax theme in place of the stock one, with numbers, list marks and the table header in berkeDark's colours.
+
+![Codex reply before and after](./codex-reply.png)
+
 **Qwen Code**: text in berkeDark's cream, numbers in their colour, and the terminal's own orange cursor in place of the grey cell Qwen Code draws.
 
 ![Qwen Code before and after](./qwen-ink-before-after.png)
