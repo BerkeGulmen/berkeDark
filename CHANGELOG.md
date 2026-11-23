@@ -2,6 +2,11 @@
 
 All notable changes to the "berkeDark" extension will be documented in this file.
 
+## [1.4.1] - 2026-11-23
+
+### Added
+- README: before-and-after pictures for Claude Code (a reply and an edit) and Codex, placed before those of Qwen Code and Grok
+
 ## [1.4.0] - 2026-11-18
 
 ### Added
